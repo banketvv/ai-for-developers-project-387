@@ -1,0 +1,10 @@
+profile: default
+
+ignores:
+  - rule: dangerous-triggers
+    file: .github/workflows/opencode.yml
+    reason: >-
+      issue_comment is the documented trigger for the /oc command. The job is
+      restricted to OWNER, MEMBER and COLLABORATOR comments and the GITHUB_TOKEN
+      is read-only; OpenCode writes through the GitHub App token.
+    expires: "2027-05-21"

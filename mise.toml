@@ -1,0 +1,170 @@
+# mise-en-place: https://mise.jdx.dev
+# Управляет версиями инструментов, окружением и задачами проекта.
+
+min_version = "2026.11.0"
+
+[tools]
+python = "3.13"
+node = "22"
+uv = "latest"
+jactionlint = "2.6.0"
+
+[env]
+# Локальные .env подхватываются, если файлы существуют.
+# backend/.env читает и сам pydantic-settings, здесь он нужен для mise exec/задач.
+_.file = ["backend/.env", "frontend/.env.local"]
+
+# --- Установка зависимостей ---
+
+[tasks.setup]
+description = "Установить зависимости backend и frontend"
+run = [
+  { task = "backend:install" },
+  { task = "frontend:install" },
+  { task = "api:install" },
+]
+
+[tasks."backend:install"]
+description = "Синхронизировать Python-зависимости (uv sync)"
+dir = "backend"
+run = "uv sync"
+
+[tasks."frontend:install"]
+description = "Установить npm-зависимости"
+dir = "frontend"
+run = "npm install"
+
+[tasks."setup:ci"]
+description = "Установка зависимостей по lock-файлам (CI)"
+run = [
+  { task = "backend:install" },
+  { task = "frontend:ci" },
+  { task = "api:install" },
+]
+
+[tasks."api:install"]
+description = "Установить зависимости TypeSpec-контракта"
+dir = "api"
+hide = true
+run = "npm ci"
+
+[tasks."api:generate"]
+description = "Пересобрать OpenAPI, TS-клиент и Pydantic-модели из TypeSpec"
+dir = "api"
+tags = ["contract"]
+run = "npm run generate"
+
+[tasks."api:check"]
+description = "Проверить, что артефакты контракта совпадают с TypeSpec"
+dir = "api"
+tags = ["contract"]
+run = "npm run check"
+
+[tasks."frontend:ci"]
+description = "npm ci по package-lock.json"
+dir = "frontend"
+hide = true
+run = "npm ci"
+
+# --- Разработка ---
+
+[tasks.dev]
+description = "Запустить backend и frontend одновременно"
+depends = ["backend:dev", "frontend:dev"]
+
+[tasks."backend:dev"]
+description = "FastAPI с автоперезагрузкой"
+dir = "backend"
+depends = ["backend:migrate"]
+run = "uv run fastapi dev app/main.py"
+
+[tasks."backend:migrate"]
+description = "Применить миграции Alembic"
+dir = "backend"
+run = "uv run alembic upgrade head"
+
+[tasks."frontend:dev"]
+description = "Vite dev-сервер"
+dir = "frontend"
+run = "npm run dev"
+
+# --- Проверки ---
+
+[tasks.check]
+description = "Линтеры, типы, тесты, сборка и браузерные тесты"
+depends = [
+  "api:check",
+  "actions:lint",
+  "backend:lint",
+  "backend:test",
+  "frontend:lint",
+  "frontend:test",
+  "frontend:build",
+  "e2e",
+]
+
+[tasks."actions:lint"]
+description = "Проверить GitHub Actions workflow (jactionlint)"
+tags = ["lint"]
+run = "jactionlint --format oneline"
+
+[tasks."backend:lint"]
+description = "ruff + mypy для backend"
+dir = "backend"
+tags = ["lint"]
+run = [
+  "uv run ruff check .",
+  "uv run ruff format --check .",
+  "uv run mypy app tests",
+]
+
+[tasks."backend:format"]
+description = "Форматирование backend (ruff)"
+dir = "backend"
+tags = ["format"]
+run = [
+  "uv run ruff check --fix .",
+  "uv run ruff format .",
+]
+
+[tasks."backend:test"]
+description = "pytest для backend"
+dir = "backend"
+tags = ["test"]
+run = "uv run pytest"
+
+[tasks."frontend:lint"]
+description = "oxlint для frontend"
+dir = "frontend"
+tags = ["lint"]
+run = "npm run lint"
+
+[tasks."frontend:test"]
+description = "Тесты frontend (vitest, один прогон)"
+dir = "frontend"
+tags = ["test"]
+run = "npm run test"
+
+[tasks."frontend:test:watch"]
+description = "Тесты frontend в режиме наблюдения"
+dir = "frontend"
+run = "npm run test:watch"
+
+# --- Браузерные тесты ---
+
+[tasks."e2e:install"]
+description = "Установить Chromium для Playwright"
+dir = "frontend"
+run = "npx playwright install chromium"
+
+[tasks.e2e]
+description = "Браузерные E2E-тесты Playwright (поднимает backend и frontend)"
+dir = "frontend"
+tags = ["test"]
+run = "npm run e2e"
+
+[tasks."frontend:build"]
+description = "Сборка frontend (tsc + vite build)"
+dir = "frontend"
+tags = ["build"]
+run = "npm run build"
