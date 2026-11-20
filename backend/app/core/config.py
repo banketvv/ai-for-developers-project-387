@@ -1,0 +1,51 @@
+from datetime import datetime
+from functools import lru_cache
+from typing import Annotated, Literal
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Настройки приложения, читаются из переменных окружения и .env."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    app_name: str = "Call Scheduler"
+    environment: Literal["local", "test", "production"] = "local"
+    debug: bool = False
+
+    # Тестовый хук: E2E фиксирует «сейчас», иначе слоты зависят от дня недели.
+    fake_now: datetime | None = None
+
+    database_url: str = "sqlite+aiosqlite:///./app.db"
+
+    owner_name: str = "Owner"
+    owner_email: str = "owner@example.com"
+    owner_timezone: str = "Europe/Moscow"
+
+    # Cookie, которой сервис опознаёт смотрящего: почта гостя или владельца.
+    session_cookie_name: str = "guest_email"
+    session_cookie_max_age: int = 60 * 60 * 24 * 30
+
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def split_cors_origins(cls, value: object) -> object:
+        """Разрешает задавать CORS_ORIGINS списком через запятую."""
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
