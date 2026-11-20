@@ -8,6 +8,12 @@
 Учебный проект Хекслета: https://ru.hexlet.io/programs/ai-for-developers
 Как это должно работать: https://files.hexlet.app/a/2ipc5m
 
+## Демо
+
+Приложение задеплоено: https://call-scheduler-hexlet.onrender.com/
+
+Бесплатный инстанс Render засыпает без трафика, поэтому первый запрос после паузы может занять до минуты.
+
 ## Стек
 
 - Разное
