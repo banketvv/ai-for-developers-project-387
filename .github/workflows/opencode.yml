@@ -37,5 +37,6 @@ jobs:
         uses: anomalyco/opencode/github@f4e363c8295fa90a03dddc451882fffe8fbce357 # v1.19.6
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           model: deepseek/deepseek-flash
