@@ -13,6 +13,7 @@ const BOOKING: BookingRead = {
   guest_name: 'Иван',
   guest_email: 'guest@example.com',
   created_at: '2026-11-16T09:00:00',
+  status: 'pending',
   meeting_type: { id: 7, title: 'Знакомство', duration_minutes: 60 },
 }
 
@@ -43,6 +44,7 @@ describe('BookingConfirmationPage', () => {
     expect(screen.getByText('60 минут')).toBeInTheDocument()
     expect(screen.getByText('Гость')).toBeInTheDocument()
     expect(screen.getByText('Иван')).toBeInTheDocument()
+    expect(screen.getByText('Ожидает подтверждения')).toBeInTheDocument()
 
     const main = screen.getByRole('main')
     expect(
@@ -51,6 +53,21 @@ describe('BookingConfirmationPage', () => {
     expect(
       within(main).getByRole('link', { name: 'Записаться ещё раз' }),
     ).toHaveAttribute('href', '/booking')
+  })
+
+  it('показывает плашку подтверждённой брони', async () => {
+    server.use(
+      http.get(bookingUrl(BOOKING.id), () =>
+        HttpResponse.json({ ...BOOKING, status: 'approved' }),
+      ),
+    )
+
+    renderConfirmation()
+
+    expect(await screen.findByText('Бронь подтверждена')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Ожидает подтверждения'),
+    ).not.toBeInTheDocument()
   })
 
   it('не создаёт бронь при перезагрузке страницы подтверждения', async () => {

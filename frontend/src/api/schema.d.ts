@@ -190,8 +190,15 @@ export interface components {
             guest_email: string;
             /** Format: date-time */
             created_at: string;
+            /** @description Статус брони: новая запись ожидает подтверждения. */
+            status: components["schemas"]["BookingStatus"];
             meeting_type: components["schemas"]["BookingMeetingTypeRead"];
         };
+        /**
+         * @description Статус брони: новая запись ждёт подтверждения владельцем.
+         * @enum {string}
+         */
+        BookingStatus: "pending" | "approved" | "rejected";
         /**
          * @description Длительность встречи в минутах: владелец выбирает из набора.
          * @enum {integer}

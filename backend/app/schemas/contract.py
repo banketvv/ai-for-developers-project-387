@@ -169,4 +169,8 @@ class BookingRead(ContractModel):
     guest_name: str
     guest_email: str
     created_at: datetime
+    status: Annotated[
+        Literal["pending", "approved", "rejected"],
+        Field(description="Статус брони: новая запись ожидает подтверждения."),
+    ]
     meeting_type: BookingMeetingTypeRead

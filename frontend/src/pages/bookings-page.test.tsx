@@ -13,6 +13,7 @@ const EARLIER: BookingRead = {
   guest_name: 'Иван',
   guest_email: 'ivan@example.com',
   created_at: '2026-11-15T09:00:00',
+  status: 'pending',
   meeting_type: { id: 7, title: 'Знакомство', duration_minutes: 60 },
 }
 
@@ -22,6 +23,7 @@ const LATER: BookingRead = {
   guest_name: 'Мария',
   guest_email: 'maria@example.com',
   created_at: '2026-11-15T09:00:00',
+  status: 'approved',
   meeting_type: { id: 8, title: 'Разбор', duration_minutes: 30 },
 }
 
@@ -70,6 +72,8 @@ describe('BookingsPage', () => {
     expect(screen.getByRole('main')).toHaveTextContent('13:00')
     expect(screen.getByRole('main')).toHaveTextContent('14:00')
     expect(screen.getByRole('main')).toHaveTextContent('60 минут')
+    expect(screen.getByText('Ожидает подтверждения')).toBeInTheDocument()
+    expect(screen.getByText('Бронь подтверждена')).toBeInTheDocument()
 
     const earlierCard = headings[0].closest('a')
     const laterCard = headings[1].closest('a')

@@ -1,7 +1,14 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,6 +24,10 @@ class Booking(Base):
     __table_args__ = (
         # Один слот одного типа — одна бронь: гонку за слот разрешает БД.
         UniqueConstraint("meeting_type_id", "start", name="uq_bookings_meeting_type_start"),
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_bookings_status",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -28,5 +39,6 @@ class Booking(Base):
     guest_email: Mapped[str] = mapped_column(String(320))
     start: Mapped[datetime] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
 
     meeting_type: Mapped["MeetingType"] = relationship(back_populates="bookings")

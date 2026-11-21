@@ -426,6 +426,7 @@ components:
         - guest_name
         - guest_email
         - created_at
+        - status
         - meeting_type
       properties:
         id:
@@ -442,8 +443,18 @@ components:
         created_at:
           type: string
           format: date-time
+        status:
+          $ref: "#/components/schemas/BookingStatus"
+          description: "Статус брони: новая запись ожидает подтверждения."
         meeting_type:
           $ref: "#/components/schemas/BookingMeetingTypeRead"
+    BookingStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+      description: "Статус брони: новая запись ждёт подтверждения владельцем."
     DurationMinutes:
       type: integer
       enum:

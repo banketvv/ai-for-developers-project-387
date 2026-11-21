@@ -138,6 +138,13 @@ model SlotsRead {
   slots: SlotRead[];
 }
 
+/** Статус брони: новая запись ждёт подтверждения владельцем. */
+union BookingStatus {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+}
+
 model BookingMeetingTypeRead {
   id: integer;
   title: string;
@@ -152,6 +159,8 @@ model BookingRead {
   guest_name: string;
   guest_email: string;
   created_at: utcDateTime;
+  /** Статус брони: новая запись ожидает подтверждения. */
+  status: BookingStatus;
   meeting_type: BookingMeetingTypeRead;
 }
 
