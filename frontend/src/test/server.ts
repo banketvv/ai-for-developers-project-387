@@ -23,6 +23,10 @@ export function bookingApproveUrl(id: number): string {
   return apiUrl(`/api/v1/bookings/${id}/approve`)
 }
 
+export function bookingRejectUrl(id: number): string {
+  return apiUrl(`/api/v1/bookings/${id}/reject`)
+}
+
 
 const defaultHandlers = [
   http.get(sessionUrl, () =>

@@ -576,3 +576,174 @@ def test_two_concurrent_decisions_approve_only_once(
     booking = db.get(Booking, created["id"])
     assert booking is not None
     assert booking.status == "approved"
+
+
+def reject(client: TestClient, booking_id: object) -> Any:
+    """Отклоняет бронь без тела запроса: решение принимает владелец."""
+    return client.post(f"/api/v1/bookings/{booking_id}/reject")
+
+
+def test_owner_rejects_a_pending_booking_and_it_disappears_for_the_guest(
+    client: TestClient, settings: Settings, db: Session
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+
+    response = reject(client, created["id"])
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "rejected"
+    assert response.json()["id"] == created["id"]
+    # Отклонённая бронь остаётся в базе как история.
+    booking = db.get(Booking, created["id"])
+    assert booking is not None
+    assert booking.status == "rejected"
+    # Карточка владельца исчезает из предстоящих сразу после отказа.
+    assert client.get("/api/v1/bookings").json() == []
+    # Владелец всё ещё может открыть историю по прямой ссылке.
+    assert client.get(f"/api/v1/bookings/{created['id']}").json()["status"] == "rejected"
+
+    client.cookies.clear()
+    client.cookies.set(settings.session_cookie_name, "guest@example.com")
+    assert client.get("/api/v1/bookings").json() == []
+    missing = client.get(f"/api/v1/bookings/{created['id']}")
+    assert missing.status_code == 404
+    assert missing.json()["error"]["message"] == "Бронь не найдена"
+
+
+@pytest.mark.parametrize("status", ["approved", "rejected"])
+def test_rejecting_an_already_decided_booking_is_an_invalid_status(
+    client: TestClient, settings: Settings, db: Session, status: str
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    booking = db.get(Booking, created["id"])
+    assert booking is not None
+    booking.status = status
+    db.commit()
+    owner_session(client, settings)
+
+    response = reject(client, created["id"])
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_status"
+
+
+def test_rejecting_a_past_booking_is_a_conflict(
+    client: TestClient, settings: Settings, db: Session
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    booking = Booking(
+        meeting_type_id=meeting_type["id"],
+        guest_name="Гость",
+        guest_email="guest@example.com",
+        start=datetime(2026, 11, 16, 8, 0),
+        created_at=datetime(2026, 11, 15, 9, 0),
+    )
+    db.add(booking)
+    db.commit()
+    owner_session(client, settings)
+
+    response = reject(client, booking.id)
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "booking_in_past"
+
+
+def test_only_the_owner_can_reject_a_booking(client: TestClient, settings: Settings) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+
+    as_guest = reject(client, created["id"])
+    client.cookies.clear()
+    without_cookie = reject(client, created["id"])
+
+    for response in (as_guest, without_cookie):
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+
+def test_rejecting_an_unknown_booking_is_not_found(client: TestClient, settings: Settings) -> None:
+    owner_session(client, settings)
+
+    response = reject(client, 999)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_the_same_guest_can_book_the_slot_after_rejection(
+    client: TestClient, settings: Settings
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+    assert reject(client, created["id"]).status_code == 200
+
+    response = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"]))
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending"
+    assert response.json()["id"] != created["id"]
+
+
+def test_another_guest_can_book_the_slot_after_rejection(
+    client: TestClient, settings: Settings
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+    assert reject(client, created["id"]).status_code == 200
+
+    response = client.post(
+        "/api/v1/bookings",
+        json=booking_payload(meeting_type["id"], guest_email="other@example.com"),
+    )
+
+    assert response.status_code == 201
+
+
+def test_rejected_bookings_do_not_hold_the_slot_but_duplicates_are_forbidden(
+    client: TestClient, settings: Settings
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+    assert reject(client, created["id"]).status_code == 200
+    assert (
+        client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).status_code
+        == 201
+    )
+
+    response = client.post(
+        "/api/v1/bookings",
+        json=booking_payload(meeting_type["id"], guest_email="other@example.com"),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "slot_taken"
+
+
+def test_rejected_booking_is_ignored_by_counts_lock_and_slots(
+    client: TestClient, settings: Settings
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+    assert client.get(f"/api/v1/meeting-types/{meeting_type['id']}").json()["duration_locked"]
+    assert reject(client, created["id"]).status_code == 200
+
+    read = client.get(f"/api/v1/meeting-types/{meeting_type['id']}").json()
+    listed = next(
+        item
+        for item in client.get("/api/v1/meeting-types").json()
+        if item["id"] == meeting_type["id"]
+    )
+    slots = client.get(f"/api/v1/meeting-types/{meeting_type['id']}/slots").json()["slots"]
+
+    for type_read in (read, listed):
+        assert type_read["bookings_count"] == 0
+        assert type_read["duration_locked"] is False
+        assert type_read["has_available_slots"] is True
+    assert slots[0] == {"start": FIRST_SLOT, "available": True}

@@ -5,13 +5,18 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
-    UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+# Статусы брони и подмножество, которое удерживает слот: отклонённые не в счёт.
+BOOKING_STATUSES = ("pending", "approved", "rejected")
+UPCOMING_BOOKING_STATUSES = ("pending", "approved")
 
 if TYPE_CHECKING:
     from app.db.models.meeting_type import MeetingType
@@ -22,8 +27,14 @@ class Booking(Base):
 
     __tablename__ = "bookings"
     __table_args__ = (
-        # Один слот одного типа — одна бронь: гонку за слот разрешает БД.
-        UniqueConstraint("meeting_type_id", "start", name="uq_bookings_meeting_type_start"),
+        # Отклонённая бронь слот не держит: индекс не учитывает статус `rejected`.
+        Index(
+            "uq_bookings_meeting_type_start_not_rejected",
+            "meeting_type_id",
+            "start",
+            unique=True,
+            sqlite_where=text("status != 'rejected'"),
+        ),
         CheckConstraint(
             "status IN ('pending', 'approved', 'rejected')",
             name="ck_bookings_status",

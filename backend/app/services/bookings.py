@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.errors import AppError, not_found
-from app.db.models import Booking, MeetingType
+from app.db.models import UPCOMING_BOOKING_STATUSES, Booking, MeetingType
 from app.schemas.booking import (
     BookingCreate,
     BookingMeetingTypeRead,
@@ -100,6 +100,7 @@ async def create_booking(
             Booking.meeting_type_id == meeting_type.id,
             Booking.guest_email == email,
             Booking.start > now,
+            Booking.status.in_(UPCOMING_BOOKING_STATUSES),
         )
         .limit(1)
     )
@@ -145,7 +146,7 @@ async def list_bookings(
     query = (
         select(Booking)
         .options(joinedload(Booking.meeting_type))
-        .where(Booking.start > now)
+        .where(Booking.start > now, Booking.status.in_(UPCOMING_BOOKING_STATUSES))
         .order_by(Booking.start, Booking.id)
     )
     if viewer.is_owner:
@@ -173,20 +174,22 @@ async def get_booking(
     if booking is None:
         raise _booking_not_found()
     is_own = viewer.email is not None and normalize_email(viewer.email) == booking.guest_email
-    if not viewer.is_owner and not is_own:
+    # Отклонённая бронь — история для владельца, но гость её больше не видит.
+    if not viewer.is_owner and (booking.status == "rejected" or not is_own):
         raise _booking_not_found()
     return to_read(booking, booking.meeting_type)
 
 
-async def approve_booking(
+async def _decide_booking(
     session: AsyncSession,
     booking_id: int,
     *,
     now: datetime,
+    status: BookingStatus,
 ) -> BookingRead:
-    """Подтверждает ожидающую предстоящую бронь: переход применяется атомарно."""
+    """Переводит ожидающую предстоящую бронь в решение владельца атомарно."""
     # Условие в UPDATE — это и проверка, и защита от гонки: выигрывает ровно одно решение.
-    approved = cast(
+    decided = cast(
         CursorResult[Any],
         await session.execute(
             update(Booking)
@@ -195,10 +198,10 @@ async def approve_booking(
                 Booking.status == "pending",
                 Booking.start > now,
             )
-            .values(status="approved")
+            .values(status=status)
         ),
     )
-    if approved.rowcount != 1:
+    if decided.rowcount != 1:
         await session.rollback()
         booking = await session.get(Booking, booking_id)
         if booking is None:
@@ -213,3 +216,23 @@ async def approve_booking(
     )
     booking = result.scalar_one()
     return to_read(booking, booking.meeting_type)
+
+
+async def approve_booking(
+    session: AsyncSession,
+    booking_id: int,
+    *,
+    now: datetime,
+) -> BookingRead:
+    """Подтверждает ожидающую предстоящую бронь."""
+    return await _decide_booking(session, booking_id, now=now, status="approved")
+
+
+async def reject_booking(
+    session: AsyncSession,
+    booking_id: int,
+    *,
+    now: datetime,
+) -> BookingRead:
+    """Отклоняет ожидающую предстоящую бронь: слот сразу освобождается."""
+    return await _decide_booking(session, booking_id, now=now, status="rejected")

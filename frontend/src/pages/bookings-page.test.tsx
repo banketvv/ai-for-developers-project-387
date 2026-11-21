@@ -7,6 +7,7 @@ import { AppRoutes } from '@/App'
 import type { BookingRead } from '@/lib/bookings'
 import {
   bookingApproveUrl,
+  bookingRejectUrl,
   bookingsUrl,
   server,
   sessionUrl,
@@ -215,6 +216,12 @@ describe('BookingsPage', () => {
     expect(
       within(approvedCard).queryByRole('button', { name: 'Подтвердить' }),
     ).not.toBeInTheDocument()
+    expect(
+      within(pendingCard).getByRole('button', { name: 'Отклонить' }),
+    ).toBeInTheDocument()
+    expect(
+      within(approvedCard).queryByRole('button', { name: 'Отклонить' }),
+    ).not.toBeInTheDocument()
   })
 
   it('подтверждает бронь на месте, не перезагружая список', async () => {
@@ -299,5 +306,60 @@ describe('BookingsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Встреча уже прошла',
     )
+  })
+
+  it('отклоняет бронь и убирает её карточку из предстоящих', async () => {
+    const user = userEvent.setup()
+    let loads = 0
+    let rejections = 0
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => {
+        loads += 1
+        return HttpResponse.json([EARLIER, LATER])
+      }),
+      http.post(bookingRejectUrl(EARLIER.id), () => {
+        rejections += 1
+        return HttpResponse.json({ ...EARLIER, status: 'rejected' })
+      }),
+    )
+
+    renderBookings()
+
+    const card = await screen.findByRole('article', { name: 'Знакомство' })
+    await user.click(within(card).getByRole('button', { name: 'Отклонить' }))
+
+    expect(
+      await screen.findByRole('article', { name: 'Разбор' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('article', { name: 'Знакомство' }),
+    ).not.toBeInTheDocument()
+    expect(rejections).toBe(1)
+    expect(loads).toBe(1)
+  })
+
+  it('объясняет, что отклоняемая бронь уже обработана', async () => {
+    const user = userEvent.setup()
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([EARLIER])),
+      http.post(bookingRejectUrl(EARLIER.id), () =>
+        HttpResponse.json(
+          { error: { code: 'invalid_status', message: 'Бронь уже обработана' } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    renderBookings()
+
+    const card = await screen.findByRole('article', { name: 'Знакомство' })
+    await user.click(within(card).getByRole('button', { name: 'Отклонить' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Бронь уже обработана',
+    )
+    expect(within(card).getByText('Ожидает подтверждения')).toBeInTheDocument()
   })
 })
