@@ -9,7 +9,6 @@ from sqlalchemy.orm import joinedload
 
 from app.core.errors import AppError, not_found
 from app.db.models import UPCOMING_BOOKING_STATUSES, Booking, MeetingType
-from app.db.models import Booking, MeetingType
 from app.schemas.booking import (
     BookingCreate,
     BookingMeetingTypeRead,
@@ -182,7 +181,6 @@ async def get_booking(
 
 
 async def _decide_booking(
-async def approve_booking(
     session: AsyncSession,
     booking_id: int,
     *,
@@ -192,10 +190,6 @@ async def approve_booking(
     """Переводит ожидающую предстоящую бронь в решение владельца атомарно."""
     # Условие в UPDATE — это и проверка, и защита от гонки: выигрывает ровно одно решение.
     decided = cast(
-) -> BookingRead:
-    """Подтверждает ожидающую предстоящую бронь: переход применяется атомарно."""
-    # Условие в UPDATE — это и проверка, и защита от гонки: выигрывает ровно одно решение.
-    approved = cast(
         CursorResult[Any],
         await session.execute(
             update(Booking)
@@ -208,10 +202,6 @@ async def approve_booking(
         ),
     )
     if decided.rowcount != 1:
-            .values(status="approved")
-        ),
-    )
-    if approved.rowcount != 1:
         await session.rollback()
         booking = await session.get(Booking, booking_id)
         if booking is None:

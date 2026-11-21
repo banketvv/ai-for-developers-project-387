@@ -9,9 +9,6 @@ from sqlalchemy import (
     Integer,
     String,
     text,
-    Integer,
-    String,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,8 +35,6 @@ class Booking(Base):
             unique=True,
             sqlite_where=text("status != 'rejected'"),
         ),
-        # Один слот одного типа — одна бронь: гонку за слот разрешает БД.
-        UniqueConstraint("meeting_type_id", "start", name="uq_bookings_meeting_type_start"),
         CheckConstraint(
             "status IN ('pending', 'approved', 'rejected')",
             name="ck_bookings_status",
