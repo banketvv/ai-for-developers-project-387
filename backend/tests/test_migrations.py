@@ -135,3 +135,84 @@ def test_migration_cascades_bookings_with_their_type(tmp_path: Path) -> None:
         connection.execute("delete from meeting_types where id = 1")
 
         assert connection.execute("select count(*) from bookings").fetchone()[0] == 0
+
+
+def insert_booking(
+    connection: sqlite3.Connection,
+    *,
+    booking_id: int,
+    status: str,
+) -> None:
+    """Кладёт бронь на один и тот же слот: проверяем уникальность по статусу."""
+    connection.execute(
+        "insert into bookings "
+        "(id, meeting_type_id, guest_name, guest_email, start, created_at, status) "
+        "values (?, 1, 'Гость', 'guest@example.com', '2026-11-16 10:00:00', "
+        "'2026-11-16 08:00:00', ?)",
+        (booking_id, status),
+    )
+
+
+def test_rejected_booking_frees_the_slot_unique_index(tmp_path: Path) -> None:
+    path = tmp_path / "migrated.db"
+    upgrade_to_head(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "insert into meeting_types (id, title, duration_minutes, created_at) "
+            "values (1, 'Тип', 30, '2026-11-16 09:00:00')"
+        )
+        # Отклонённая бронь не держит слот: тот же слот занимает предстоящая.
+        insert_booking(connection, booking_id=1, status="rejected")
+        insert_booking(connection, booking_id=2, status="pending")
+        # Дубли среди предстоящих по-прежнему запрещены.
+        with pytest.raises(sqlite3.IntegrityError):
+            insert_booking(connection, booking_id=3, status="approved")
+
+        index_sql = connection.execute(
+            "select sql from sqlite_master "
+            "where type = 'index' and name = 'uq_bookings_meeting_type_start_not_rejected'"
+        ).fetchone()[0]
+        table_sql = connection.execute(
+            "select sql from sqlite_master where type = 'table' and name = 'bookings'"
+        ).fetchone()[0]
+
+    assert "WHERE status != 'rejected'" in index_sql
+    # Перестройка таблицы не теряет CHECK-ограничение статуса.
+    assert "CHECK" in table_sql.upper()
+
+
+def test_unique_index_downgrade_restores_strict_slot_uniqueness(tmp_path: Path) -> None:
+    path = tmp_path / "migrated.db"
+    upgrade_to_head(path)
+
+    command.downgrade(alembic_config(path), "20261121_0002")
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "insert into meeting_types (id, title, duration_minutes, created_at) "
+            "values (1, 'Тип', 30, '2026-11-16 09:00:00')"
+        )
+        insert_booking(connection, booking_id=1, status="rejected")
+        with pytest.raises(sqlite3.IntegrityError):
+            insert_booking(connection, booking_id=2, status="pending")
+
+
+def test_unique_index_downgrade_removes_rejected_rows_with_duplicates(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "migrated.db"
+    upgrade_to_head(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "insert into meeting_types (id, title, duration_minutes, created_at) "
+            "values (1, 'Тип', 30, '2026-11-16 09:00:00')"
+        )
+        insert_booking(connection, booking_id=1, status="rejected")
+        insert_booking(connection, booking_id=2, status="pending")
+
+    # Старая схема не умеет хранить отказ: история отклонённой брони удаляется.
+    command.downgrade(alembic_config(path), "20261121_0002")
+
+    assert statuses(path) == ["pending"]

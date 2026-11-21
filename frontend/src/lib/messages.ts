@@ -7,6 +7,7 @@ export const MEETING_TYPE_SAVED = 'Тип сохранён'
 export const MEETING_TYPE_DELETED = 'Тип удалён'
 export const DURATION_LOCKED = 'Длительность нельзя изменить: у типа есть предстоящие брони'
 export const APPROVE_BOOKING_LABEL = 'Подтвердить'
+export const REJECT_BOOKING_LABEL = 'Отклонить'
 export const BOOKING_ALREADY_DECIDED = 'Бронь уже обработана'
 export const BOOKING_IN_PAST = 'Встреча уже прошла'
 // Владельческий экран с чужой почтой: cookie не чистим, зовём войти заново.

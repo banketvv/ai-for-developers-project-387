@@ -8,6 +8,7 @@ from app.services.bookings import approve_booking as approve_booking_service
 from app.services.bookings import create_booking as create_booking_service
 from app.services.bookings import get_booking as get_booking_service
 from app.services.bookings import list_bookings as list_bookings_service
+from app.services.bookings import reject_booking as reject_booking_service
 
 router = APIRouter(prefix="/api/v1/bookings", tags=["bookings"])
 
@@ -66,3 +67,18 @@ async def approve_booking(
 ) -> BookingRead:
     """Подтверждает ожидающую предстоящую бронь: доступно только владельцу."""
     return await approve_booking_service(session, booking_id, now=now)
+
+
+@router.post(
+    "/{booking_id}/reject",
+    response_model=BookingRead,
+    responses=error_responses(403, 404, 409, 422),
+)
+async def reject_booking(
+    booking_id: int,
+    session: SessionDep,
+    owner: OwnerDep,
+    now: NowDep,
+) -> BookingRead:
+    """Отклоняет ожидающую предстоящую бронь: слот сразу освобождается."""
+    return await reject_booking_service(session, booking_id, now=now)

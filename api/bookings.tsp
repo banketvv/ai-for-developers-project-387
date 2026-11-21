@@ -6,8 +6,8 @@ namespace CallScheduler;
 /**
  * Брони. Гость видит только свои, владелец — все предстоящие.
  * Одновременно у гостя не больше одной предстоящей брони на тип, а слот
- * не может быть занят двумя бронями: пару «тип + начало» защищает уникальный
- * индекс в базе.
+ * не может быть занят двумя бронями: пару «тип + начало» защищает частичный
+ * уникальный индекс в базе, который не учитывает отклонённые брони.
  */
 @route("/api/v1/bookings")
 @tag("bookings")
@@ -31,6 +31,13 @@ interface BookingRoutes {
   @route("/{booking_id}/approve")
   @summary("Подтвердить бронь")
   approve(
+    @path booking_id: integer,
+  ): BookingRead | ForbiddenResponse | NotFoundResponse | ConflictResponse | ValidationFailedResponse;
+
+  @post
+  @route("/{booking_id}/reject")
+  @summary("Отклонить бронь, освобождая слот")
+  reject(
     @path booking_id: integer,
   ): BookingRead | ForbiddenResponse | NotFoundResponse | ConflictResponse | ValidationFailedResponse;
 }

@@ -43,6 +43,14 @@ export function approveBooking(bookingId: number): Promise<BookingRead> {
   )
 }
 
+export function rejectBooking(bookingId: number): Promise<BookingRead> {
+  return unwrap(
+    apiClient.POST('/api/v1/bookings/{booking_id}/reject', {
+      params: { path: { booking_id: bookingId } },
+    }),
+  )
+}
+
 // Доменные ответы решения объясняются на странице; остальное — общей ошибкой сети.
 export function bookingActionErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {

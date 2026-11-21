@@ -16,6 +16,7 @@ def add_booking(
     start: datetime,
     now: datetime,
     email: str = "guest@example.com",
+    status: str = "pending",
 ) -> Booking:
     """Кладёт бронь напрямую: правка типа проверяется через HTTP."""
     booking = Booking(
@@ -24,6 +25,7 @@ def add_booking(
         guest_email=email,
         start=start,
         created_at=now,
+        status=status,
     )
     db.add(booking)
     db.commit()
@@ -160,6 +162,29 @@ def test_past_bookings_do_not_lock_duration(
     assert detail["duration_locked"] is False
     # Общее число броней остаётся для предупреждения об удалении.
     assert detail["bookings_count"] == 1
+
+
+def test_rejected_bookings_do_not_lock_duration_or_count(
+    client: TestClient, settings: Settings, db: Session, now: datetime
+) -> None:
+    created = create_meeting_type(client, settings, title="Отклонённая", duration_minutes=30)
+    add_booking(
+        db,
+        int(created["id"]),
+        start=upcoming_start(now),
+        now=now,
+        status="rejected",
+    )
+
+    response = client.patch(
+        f"/api/v1/meeting-types/{created['id']}",
+        json={"duration_minutes": 45},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["duration_minutes"] == 45
+    assert response.json()["duration_locked"] is False
+    assert response.json()["bookings_count"] == 0
 
 
 @pytest.mark.parametrize(

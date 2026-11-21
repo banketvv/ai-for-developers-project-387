@@ -6,6 +6,7 @@ import {
   approveBooking,
   bookingActionErrorMessage,
   listBookings,
+  rejectBooking,
 } from '@/lib/bookings'
 import type { BookingRead } from '@/lib/bookings'
 import {
@@ -18,6 +19,7 @@ import { durationLabel } from '@/lib/meeting-types'
 import {
   APPROVE_BOOKING_LABEL,
   LOAD_ERROR,
+  REJECT_BOOKING_LABEL,
   RETRY_LABEL,
 } from '@/lib/messages'
 import { useSession } from '@/lib/session'
@@ -32,6 +34,7 @@ function BookingsPage() {
   const [bookings, setBookings] = useState<BookingRead[]>([])
   const [changingEmail, setChangingEmail] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -64,6 +67,22 @@ function BookingsPage() {
       setActionError(bookingActionErrorMessage(caught))
     } finally {
       setApprovingId(null)
+    }
+  }
+
+  // Отказ освобождает слот: карточка отклонённой брони исчезает из предстоящих.
+  async function handleReject(bookingId: number) {
+    setRejectingId(bookingId)
+    setActionError(null)
+    try {
+      await rejectBooking(bookingId)
+      setBookings((current) =>
+        current.filter((booking) => booking.id !== bookingId),
+      )
+    } catch (caught) {
+      setActionError(bookingActionErrorMessage(caught))
+    } finally {
+      setRejectingId(null)
     }
   }
 
@@ -167,10 +186,23 @@ function BookingsPage() {
                 {isOwner && booking.status === 'pending' ? (
                   <div className="mt-4 flex flex-wrap gap-3">
                     <Button
-                      disabled={approvingId === booking.id}
+                      disabled={
+                        approvingId === booking.id ||
+                        rejectingId === booking.id
+                      }
                       onClick={() => void handleApprove(booking.id)}
                     >
                       {APPROVE_BOOKING_LABEL}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={
+                        rejectingId === booking.id ||
+                        approvingId === booking.id
+                      }
+                      onClick={() => void handleReject(booking.id)}
+                    >
+                      {REJECT_BOOKING_LABEL}
                     </Button>
                   </div>
                 ) : null}
