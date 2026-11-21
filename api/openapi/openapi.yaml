@@ -96,6 +96,49 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       tags:
         - bookings
+  /api/v1/bookings/{booking_id}/approve:
+    post:
+      operationId: BookingRoutes_approve
+      summary: Подтвердить бронь
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingRead"
+        "403":
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      tags:
+        - bookings
   /api/v1/meeting-types:
     get:
       operationId: MeetingTypeRoutes_list
@@ -371,7 +414,7 @@ components:
       properties:
         code:
           type: string
-          description: "Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`."
+          description: "Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `invalid_status`, `booking_in_past`."
         message:
           type: string
           description: Человекочитаемое сообщение для показа рядом с формой или экраном.

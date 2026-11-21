@@ -424,3 +424,155 @@ def test_unknown_booking_is_not_found(client: TestClient, settings: Settings) ->
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "not_found"
+
+
+def owner_session(client: TestClient, settings: Settings) -> None:
+    """Входит владельцем: дальше решения по броням принимаются от его имени."""
+    client.cookies.clear()
+    assert client.post("/api/v1/session", json={"email": settings.owner_email}).status_code == 204
+
+
+def approve(client: TestClient, booking_id: object) -> Any:
+    """Отправляет решение по брони без тела запроса."""
+    return client.post(f"/api/v1/bookings/{booking_id}/approve")
+
+
+def test_owner_approves_a_pending_booking_and_guest_sees_it(
+    client: TestClient, settings: Settings
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    owner_session(client, settings)
+
+    response = approve(client, created["id"])
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "approved"
+    assert response.json()["id"] == created["id"]
+    assert response.json()["guest_email"] == "guest@example.com"
+
+    client.cookies.clear()
+    client.cookies.set(settings.session_cookie_name, "guest@example.com")
+    assert client.get(f"/api/v1/bookings/{created['id']}").json()["status"] == "approved"
+    assert [item["status"] for item in client.get("/api/v1/bookings").json()] == ["approved"]
+
+
+@pytest.mark.parametrize("status", ["approved", "rejected"])
+def test_approving_an_already_decided_booking_is_an_invalid_status(
+    client: TestClient, settings: Settings, db: Session, status: str
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+    booking = db.get(Booking, created["id"])
+    assert booking is not None
+    booking.status = status
+    db.commit()
+    owner_session(client, settings)
+
+    response = approve(client, created["id"])
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_status"
+
+
+def test_approving_a_past_booking_is_a_conflict(
+    client: TestClient, settings: Settings, db: Session
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    db.add(
+        Booking(
+            meeting_type_id=meeting_type["id"],
+            guest_name="Гость",
+            guest_email="guest@example.com",
+            start=datetime(2026, 11, 16, 8, 0),
+            created_at=datetime(2026, 11, 15, 9, 0),
+        )
+    )
+    db.commit()
+    owner_session(client, settings)
+
+    response = approve(client, 1)
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "booking_in_past"
+
+
+def test_status_is_checked_before_the_meeting_time(
+    client: TestClient, settings: Settings, db: Session
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    db.add(
+        Booking(
+            meeting_type_id=meeting_type["id"],
+            guest_name="Гость",
+            guest_email="guest@example.com",
+            start=datetime(2026, 11, 16, 8, 0),
+            created_at=datetime(2026, 11, 15, 9, 0),
+            status="approved",
+        )
+    )
+    db.commit()
+    owner_session(client, settings)
+
+    response = approve(client, 1)
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "invalid_status"
+
+
+def test_only_the_owner_can_approve_a_booking(client: TestClient, settings: Settings) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+
+    as_guest = approve(client, created["id"])
+    client.cookies.clear()
+    without_cookie = approve(client, created["id"])
+
+    for response in (as_guest, without_cookie):
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+
+def test_approving_an_unknown_booking_is_not_found(client: TestClient, settings: Settings) -> None:
+    owner_session(client, settings)
+
+    response = approve(client, 999)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_two_concurrent_decisions_approve_only_once(
+    app: FastAPI, settings: Settings, db: Session
+) -> None:
+    with TestClient(app) as setup_client:
+        meeting_type = create_meeting_type(
+            setup_client, settings, title="Час", duration_minutes=60
+        )
+        created = setup_client.post(
+            "/api/v1/bookings", json=booking_payload(meeting_type["id"])
+        ).json()
+
+    barrier = threading.Barrier(2)
+    results: list[tuple[int, dict[str, Any]]] = []
+
+    def attempt() -> None:
+        with TestClient(app) as thread_client:
+            thread_client.cookies.set(settings.session_cookie_name, settings.owner_email)
+            barrier.wait(timeout=10)
+            response = approve(thread_client, created["id"])
+            results.append((response.status_code, response.json()))
+
+    threads = [threading.Thread(target=attempt) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=20)
+
+    assert len(results) == 2
+    assert sorted(status for status, _ in results) == [200, 409]
+    conflict = next(body for status, body in results if status == 409)
+    assert conflict["error"]["code"] == "invalid_status"
+    booking = db.get(Booking, created["id"])
+    assert booking is not None
+    assert booking.status == "approved"

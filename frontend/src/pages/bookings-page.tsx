@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BookingStatusBadge } from '@/components/booking-status-badge'
 import { Button } from '@/components/ui/button'
-import { listBookings } from '@/lib/bookings'
+import {
+  approveBooking,
+  bookingActionErrorMessage,
+  listBookings,
+} from '@/lib/bookings'
 import type { BookingRead } from '@/lib/bookings'
 import {
   formatInstantDate,
@@ -11,7 +15,11 @@ import {
   viewerTimeZone,
 } from '@/lib/datetime'
 import { durationLabel } from '@/lib/meeting-types'
-import { LOAD_ERROR, RETRY_LABEL } from '@/lib/messages'
+import {
+  APPROVE_BOOKING_LABEL,
+  LOAD_ERROR,
+  RETRY_LABEL,
+} from '@/lib/messages'
 import { useSession } from '@/lib/session'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
@@ -23,9 +31,12 @@ function BookingsPage() {
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [bookings, setBookings] = useState<BookingRead[]>([])
   const [changingEmail, setChangingEmail] = useState(false)
+  const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setStatus('loading')
+    setActionError(null)
     try {
       setBookings(await listBookings())
       setStatus('ready')
@@ -37,6 +48,24 @@ function BookingsPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Подтверждение меняет только одну карточку: остальной список остаётся на месте.
+  async function handleApprove(bookingId: number) {
+    setApprovingId(bookingId)
+    setActionError(null)
+    try {
+      const updated = await approveBooking(bookingId)
+      setBookings((current) =>
+        current.map((booking) =>
+          booking.id === updated.id ? updated : booking,
+        ),
+      )
+    } catch (caught) {
+      setActionError(bookingActionErrorMessage(caught))
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
   // Cookie чистится только явным действием: список сам её не трогает.
   async function handleChangeEmail() {
@@ -73,6 +102,11 @@ function BookingsPage() {
           : 'Ваши предстоящие встречи.'}{' '}
         Время указано в поясе: {timeZoneName(timeZone)}.
       </p>
+      {actionError ? (
+        <p role="alert" className="mt-6 text-sm text-destructive">
+          {actionError}
+        </p>
+      ) : null}
       {status === 'error' ? (
         <div className="mt-8 max-w-md space-y-3">
           <p role="alert" className="text-sm text-destructive">
@@ -102,13 +136,13 @@ function BookingsPage() {
         <ul className="mt-8 space-y-4">
           {bookings.map((booking) => (
             <li key={booking.id}>
-              <Link
-                to={`/bookings/${booking.id}`}
-                className="block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              <article
+                aria-labelledby={`booking-${booking.id}`}
+                className="rounded-xl border border-border bg-card p-6 shadow-sm transition-colors hover:border-brand"
               >
-                <article
-                  aria-labelledby={`booking-${booking.id}`}
-                  className="rounded-xl border border-border bg-card p-6 shadow-sm transition-colors hover:border-brand"
+                <Link
+                  to={`/bookings/${booking.id}`}
+                  className="block rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     <h2
@@ -129,8 +163,18 @@ function BookingsPage() {
                       {booking.guest_name} · {booking.guest_email}
                     </p>
                   ) : null}
-                </article>
-              </Link>
+                </Link>
+                {isOwner && booking.status === 'pending' ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Button
+                      disabled={approvingId === booking.id}
+                      onClick={() => void handleApprove(booking.id)}
+                    >
+                      {APPROVE_BOOKING_LABEL}
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
             </li>
           ))}
         </ul>

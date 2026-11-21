@@ -1,5 +1,10 @@
 import type { components } from '@/api/schema'
-import { apiClient, unwrap } from '@/lib/api'
+import { ApiError, apiClient, unwrap } from '@/lib/api'
+import {
+  BOOKING_ALREADY_DECIDED,
+  BOOKING_IN_PAST,
+  SUBMIT_ERROR,
+} from '@/lib/messages'
 
 // Типы взяты из OpenAPI-контракта: ручные копии разъезжались бы с сервером.
 export type BookingRead = components['schemas']['BookingRead']
@@ -28,4 +33,25 @@ export function getBooking(bookingId: number): Promise<BookingRead> {
       params: { path: { booking_id: bookingId } },
     }),
   )
+}
+
+export function approveBooking(bookingId: number): Promise<BookingRead> {
+  return unwrap(
+    apiClient.POST('/api/v1/bookings/{booking_id}/approve', {
+      params: { path: { booking_id: bookingId } },
+    }),
+  )
+}
+
+// Доменные ответы решения объясняются на странице; остальное — общей ошибкой сети.
+export function bookingActionErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === 'invalid_status') {
+      return BOOKING_ALREADY_DECIDED
+    }
+    if (error.code === 'booking_in_past') {
+      return BOOKING_IN_PAST
+    }
+  }
+  return SUBMIT_ERROR
 }
