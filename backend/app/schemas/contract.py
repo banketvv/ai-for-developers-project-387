@@ -15,7 +15,7 @@ class ApiError(ContractModel):
     code: Annotated[
         str,
         Field(
-            description="Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`."
+            description="Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `invalid_status`, `booking_in_past`."
         ),
     ]
     message: Annotated[

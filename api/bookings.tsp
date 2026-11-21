@@ -26,4 +26,11 @@ interface BookingRoutes {
   @route("/{booking_id}")
   @summary("Бронь по номеру")
   read(@path booking_id: integer): BookingRead | NotFoundResponse | ValidationFailedResponse;
+
+  @post
+  @route("/{booking_id}/approve")
+  @summary("Подтвердить бронь")
+  approve(
+    @path booking_id: integer,
+  ): BookingRead | ForbiddenResponse | NotFoundResponse | ConflictResponse | ValidationFailedResponse;
 }

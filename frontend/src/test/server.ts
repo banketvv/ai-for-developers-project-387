@@ -19,6 +19,10 @@ export function bookingUrl(id: number): string {
   return apiUrl(`/api/v1/bookings/${id}`)
 }
 
+export function bookingApproveUrl(id: number): string {
+  return apiUrl(`/api/v1/bookings/${id}/approve`)
+}
+
 
 const defaultHandlers = [
   http.get(sessionUrl, () =>

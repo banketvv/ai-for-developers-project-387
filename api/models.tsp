@@ -13,7 +13,7 @@ union DurationMinutes {
 
 /** Единый конверт ошибки: клиент различает причины по машинному коду. */
 model ApiError {
-  /** Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`. */
+  /** Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `invalid_status`, `booking_in_past`. */
   code: string;
   /** Человекочитаемое сообщение для показа рядом с формой или экраном. */
   message: string;

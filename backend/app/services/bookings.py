@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
-from typing import cast
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -40,6 +41,16 @@ def to_read(booking: Booking, meeting_type: MeetingType) -> BookingRead:
 def _booking_not_found() -> AppError:
     """Бронь, которую смотрящему нельзя показать, ничем не отличается от несуществующей."""
     return not_found("Бронь не найдена")
+
+
+def _invalid_status() -> AppError:
+    """Решение по уже обработанной брони недопустимо: повтор идёт тем же кодом."""
+    return AppError(code="invalid_status", message="Бронь уже обработана", status_code=409)
+
+
+def _booking_in_past() -> AppError:
+    """Прошедшую встречу нельзя ни подтвердить, ни отклонить."""
+    return AppError(code="booking_in_past", message="Встреча уже прошла", status_code=409)
 
 
 def _is_slot_start(
@@ -164,4 +175,41 @@ async def get_booking(
     is_own = viewer.email is not None and normalize_email(viewer.email) == booking.guest_email
     if not viewer.is_owner and not is_own:
         raise _booking_not_found()
+    return to_read(booking, booking.meeting_type)
+
+
+async def approve_booking(
+    session: AsyncSession,
+    booking_id: int,
+    *,
+    now: datetime,
+) -> BookingRead:
+    """Подтверждает ожидающую предстоящую бронь: переход применяется атомарно."""
+    # Условие в UPDATE — это и проверка, и защита от гонки: выигрывает ровно одно решение.
+    approved = cast(
+        CursorResult[Any],
+        await session.execute(
+            update(Booking)
+            .where(
+                Booking.id == booking_id,
+                Booking.status == "pending",
+                Booking.start > now,
+            )
+            .values(status="approved")
+        ),
+    )
+    if approved.rowcount != 1:
+        await session.rollback()
+        booking = await session.get(Booking, booking_id)
+        if booking is None:
+            raise _booking_not_found()
+        # Порядок важен: обработанная бронь отвечает invalid_status даже если встреча прошла.
+        if booking.status != "pending":
+            raise _invalid_status()
+        raise _booking_in_past()
+    await session.commit()
+    result = await session.execute(
+        select(Booking).options(joinedload(Booking.meeting_type)).where(Booking.id == booking_id)
+    )
+    booking = result.scalar_one()
     return to_read(booking, booking.meeting_type)

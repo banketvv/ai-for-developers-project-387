@@ -5,7 +5,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { AppRoutes } from '@/App'
 import type { BookingRead } from '@/lib/bookings'
-import { bookingsUrl, server, sessionUrl } from '@/test/server'
+import {
+  bookingApproveUrl,
+  bookingsUrl,
+  server,
+  sessionUrl,
+} from '@/test/server'
 
 const EARLIER: BookingRead = {
   id: 42,
@@ -74,6 +79,9 @@ describe('BookingsPage', () => {
     expect(screen.getByRole('main')).toHaveTextContent('60 минут')
     expect(screen.getByText('Ожидает подтверждения')).toBeInTheDocument()
     expect(screen.getByText('Бронь подтверждена')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Подтвердить' }),
+    ).not.toBeInTheDocument()
 
     const earlierCard = headings[0].closest('a')
     const laterCard = headings[1].closest('a')
@@ -185,5 +193,111 @@ describe('BookingsPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Сменить email' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('показывает владельцу подтверждение только у ожидающих броней', async () => {
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([EARLIER, LATER])),
+    )
+
+    renderBookings()
+
+    const pendingCard = await screen.findByRole('article', {
+      name: 'Знакомство',
+    })
+    const approvedCard = screen.getByRole('article', { name: 'Разбор' })
+    const approve = within(pendingCard).getByRole('button', {
+      name: 'Подтвердить',
+    })
+
+    expect(approve.closest('a')).toBeNull()
+    expect(
+      within(approvedCard).queryByRole('button', { name: 'Подтвердить' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('подтверждает бронь на месте, не перезагружая список', async () => {
+    const user = userEvent.setup()
+    let loads = 0
+    let approvals = 0
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => {
+        loads += 1
+        return HttpResponse.json([EARLIER])
+      }),
+      http.post(bookingApproveUrl(EARLIER.id), () => {
+        approvals += 1
+        return HttpResponse.json({ ...EARLIER, status: 'approved' })
+      }),
+    )
+
+    renderBookings()
+
+    const card = await screen.findByRole('article', { name: 'Знакомство' })
+    expect(within(card).getByText('Ожидает подтверждения')).toBeInTheDocument()
+
+    await user.click(
+      within(card).getByRole('button', { name: 'Подтвердить' }),
+    )
+
+    expect(await within(card).findByText('Бронь подтверждена')).toBeInTheDocument()
+    expect(
+      within(card).queryByRole('button', { name: 'Подтвердить' }),
+    ).not.toBeInTheDocument()
+    expect(approvals).toBe(1)
+    expect(loads).toBe(1)
+  })
+
+  it('объясняет, что бронь уже обработана', async () => {
+    const user = userEvent.setup()
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([EARLIER])),
+      http.post(bookingApproveUrl(EARLIER.id), () =>
+        HttpResponse.json(
+          { error: { code: 'invalid_status', message: 'Бронь уже обработана' } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    renderBookings()
+
+    const card = await screen.findByRole('article', { name: 'Знакомство' })
+    await user.click(
+      within(card).getByRole('button', { name: 'Подтвердить' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Бронь уже обработана',
+    )
+    expect(within(card).getByText('Ожидает подтверждения')).toBeInTheDocument()
+  })
+
+  it('объясняет, что встреча уже прошла', async () => {
+    const user = userEvent.setup()
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([EARLIER])),
+      http.post(bookingApproveUrl(EARLIER.id), () =>
+        HttpResponse.json(
+          { error: { code: 'booking_in_past', message: 'Встреча уже прошла' } },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    renderBookings()
+
+    const card = await screen.findByRole('article', { name: 'Знакомство' })
+    await user.click(
+      within(card).getByRole('button', { name: 'Подтвердить' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Встреча уже прошла',
+    )
   })
 })
