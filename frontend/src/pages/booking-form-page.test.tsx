@@ -33,6 +33,7 @@ const BOOKING: BookingRead = {
   guest_name: 'Иван',
   guest_email: 'guest@example.com',
   created_at: '2026-11-16T09:00:00',
+  status: 'pending',
   meeting_type: { id: 7, title: 'Знакомство', duration_minutes: 60 },
 }
 

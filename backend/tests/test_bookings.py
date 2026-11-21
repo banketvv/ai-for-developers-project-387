@@ -57,6 +57,7 @@ def test_booking_is_created_and_sets_the_guest_cookie(
     assert body["guest_name"] == "Гость"
     assert body["guest_email"] == "guest@example.com"
     assert body["created_at"] == "2026-11-16T09:00:00Z"
+    assert body["status"] == "pending"
     assert body["meeting_type"] == {
         "id": meeting_type["id"],
         "title": "Консультация",
@@ -69,6 +70,24 @@ def test_booking_is_created_and_sets_the_guest_cookie(
     assert "Max-Age=2592000" in cookie
     assert "SameSite=lax" in cookie
     assert client.get("/api/v1/session").json()["email"] == "guest@example.com"
+
+
+def test_booking_status_is_reported_in_read_and_list(
+    client: TestClient, settings: Settings, db: Session
+) -> None:
+    meeting_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    created = client.post("/api/v1/bookings", json=booking_payload(meeting_type["id"])).json()
+
+    booking = db.get(Booking, created["id"])
+    assert booking is not None
+    booking.status = "approved"
+    db.commit()
+
+    read = client.get(f"/api/v1/bookings/{created['id']}")
+    listed = client.get("/api/v1/bookings")
+
+    assert read.json()["status"] == "approved"
+    assert [item["status"] for item in listed.json()] == ["approved"]
 
 
 def test_booking_for_unknown_meeting_type_is_not_found(client: TestClient) -> None:

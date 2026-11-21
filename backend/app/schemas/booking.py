@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import field_validator
 
@@ -25,3 +26,5 @@ class BookingCreate(contract.BookingCreate):
 
 BookingMeetingTypeRead = contract.BookingMeetingTypeRead
 BookingRead = contract.BookingRead
+# Генератор встраивает union в BookingRead, поэтому алиас держим рядом с моделью.
+BookingStatus = Literal["pending", "approved", "rejected"]

@@ -8,7 +8,12 @@ from sqlalchemy.orm import joinedload
 
 from app.core.errors import AppError, not_found
 from app.db.models import Booking, MeetingType
-from app.schemas.booking import BookingCreate, BookingMeetingTypeRead, BookingRead
+from app.schemas.booking import (
+    BookingCreate,
+    BookingMeetingTypeRead,
+    BookingRead,
+    BookingStatus,
+)
 from app.schemas.meeting_type import DurationMinutes
 from app.services.meeting_types import upcoming_intervals
 from app.services.session import Viewer, normalize_email
@@ -23,6 +28,7 @@ def to_read(booking: Booking, meeting_type: MeetingType) -> BookingRead:
         guest_name=booking.guest_name,
         guest_email=booking.guest_email,
         created_at=booking.created_at,
+        status=cast(BookingStatus, booking.status),
         meeting_type=BookingMeetingTypeRead(
             id=meeting_type.id,
             title=meeting_type.title,
@@ -104,6 +110,7 @@ async def create_booking(
         guest_email=email,
         start=payload.start,
         created_at=now,
+        status="pending",
     )
     session.add(booking)
     try:

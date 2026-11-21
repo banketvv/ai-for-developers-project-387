@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { BookingStatusBadge } from '@/components/booking-status-badge'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api'
 import { getBooking } from '@/lib/bookings'
@@ -91,6 +92,9 @@ function BookingConfirmationPage() {
       <p className="mt-3 text-sm text-muted-foreground">
         Вы записаны на «{booking.meeting_type.title}»
       </p>
+      <div className="mt-3">
+        <BookingStatusBadge status={booking.status} />
+      </div>
       <dl className="mt-8 max-w-lg space-y-3 rounded-xl border border-border bg-card p-6 text-sm shadow-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-muted-foreground">Дата</dt>

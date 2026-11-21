@@ -34,6 +34,7 @@ test('гость записывается на слот и видит бронь
   ).toBeVisible()
   await expect(page.getByText('Вы записаны на «Знакомство»')).toBeVisible()
   await expect(page.getByText('Иван')).toBeVisible()
+  await expect(page.getByText('Ожидает подтверждения')).toBeVisible()
 
   await page
     .getByRole('main')
@@ -43,6 +44,7 @@ test('гость записывается на слот и видит бронь
     page.getByRole('heading', { level: 1, name: 'Предстоящие события' }),
   ).toBeVisible()
   await expect(page.getByRole('link', { name: /Знакомство/ })).toBeVisible()
+  await expect(page.getByText('Ожидает подтверждения')).toBeVisible()
 
   // Перезагрузка списка не создаёт вторую бронь и не теряет запись.
   await page.reload()
