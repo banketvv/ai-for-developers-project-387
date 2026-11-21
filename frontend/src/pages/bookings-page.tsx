@@ -190,7 +190,6 @@ function BookingsPage() {
                         approvingId === booking.id ||
                         rejectingId === booking.id
                       }
-                      disabled={approvingId === booking.id}
                       onClick={() => void handleApprove(booking.id)}
                     >
                       {APPROVE_BOOKING_LABEL}
