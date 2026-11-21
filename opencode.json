@@ -11,7 +11,9 @@
   "permission": {
     "external_directory": {
       "/tmp/*": "allow",
-      "/tmp/**": "allow"
+      "/tmp/**": "allow",
+      "/home/runner/work/*": "allow",
+      "/home/runner/work/**": "allow"
     }
   }
 }
