@@ -28,6 +28,8 @@ cd ai-for-developers-project-387
 
 ## Использование
 
+Работающее приложение из предыдущего проекта: https://call-scheduler-hexlet.onrender.com/
+
 <!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
 
 ---
