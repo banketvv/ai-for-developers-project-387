@@ -7,6 +7,7 @@ min_version = "2026.11.0"
 python = "3.13"
 node = "22"
 uv = "latest"
+jactionlint = "2.6.0"
 
 [env]
 # Локальные .env подхватываются, если файлы существуют.
@@ -92,6 +93,7 @@ run = "npm run dev"
 [tasks.check]
 description = "Линтеры, типы, тесты, сборка и браузерные тесты"
 depends = [
+  "actions:lint",
   "api:check",
   "backend:lint",
   "backend:test",
@@ -119,6 +121,11 @@ run = [
   "uv run ruff check --fix .",
   "uv run ruff format .",
 ]
+
+[tasks."actions:lint"]
+description = "jactionlint для GitHub Actions workflow"
+tags = ["lint"]
+run = "jactionlint --color"
 
 [tasks."backend:test"]
 description = "pytest для backend"
