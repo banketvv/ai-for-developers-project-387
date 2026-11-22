@@ -5,6 +5,11 @@
 
 Интегрируйте работу агентов в GitHub проект
 
+Это продолжение первого проекта «Календарь звонков». Исходная спецификация и принятые решения живут в первом репозитории:
+
+- [Спецификация](https://github.com/banketvv/ai-for-developers-project-386/issues/14)
+- [Карта решений](https://github.com/banketvv/ai-for-developers-project-386/issues/2)
+
 Учебный проект Хекслета: https://ru.hexlet.io/programs/ai-for-developers
 Как это должно работать: https://files.hexlet.app/a/2ipc5m
 
