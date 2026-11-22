@@ -1,0 +1,38 @@
+name: opencode
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: opencode-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # OpenCode exchanges the OIDC token for a scoped GitHub App token
+
+jobs:
+  opencode:
+    if: |
+      (startsWith(github.event.comment.body, '/oc') ||
+       startsWith(github.event.comment.body, '/opencode')) &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER' ||
+       github.event.comment.author_association == 'COLLABORATOR')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@17b79f4e0c16dcff200b0417567ed22aeb2d7166 # github-v1.2.28
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          VERSION: 1.19.6 # pin the OpenCode 1 binary installed by the action
+        with:
+          model: deepseek/deepseek-flash

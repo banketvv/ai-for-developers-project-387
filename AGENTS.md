@@ -25,6 +25,7 @@ mise run api:check           # упасть, если артефакты кон�
 mise run e2e                 # браузерные E2E-тесты Playwright (поднимает оба сервера)
 mise run e2e:install         # поставить Chromium для Playwright (один раз)
 mise run backend:format      # ruff check --fix + ruff format
+mise run actions:lint        # jactionlint для .github/workflows
 mise tasks ls
 ```
 
@@ -34,8 +35,9 @@ mise tasks ls
 - Browser tests: `mise run check` includes `mise run e2e`, which runs Playwright in Chromium against the real FastAPI and Vite. They start their own servers on `127.0.0.1:8001`/`:5174` with a throwaway `backend/e2e.db` and a fixed clock (`FAKE_NOW`). Install Chromium once with `mise run e2e:install`; use `mise run e2e` to run only the browser tests. Specs live in `frontend/e2e/**/*.e2e.ts` — the `.e2e.ts` suffix keeps Vitest away from them.
 - Single backend test: `cd backend && uv run pytest tests/test_health.py -k health`.
 - Frontend tests are Vitest + Testing Library on jsdom, colocated as `*.test.tsx`. `npm run lint` is **oxlint**, not ESLint. `npm run build` (`tsc -b && vite build`) is the only TypeScript typecheck — run it after TS changes.
-- `mise run check` runs its seven tasks in parallel; one failure does not stop the others, but the run exits non-zero.
+- `mise run check` runs its eight tasks in parallel; one failure does not stop the others, but the run exits non-zero.
 - `api:check` regenerates the contract artifacts and fails when they differ from git — run `mise run api:generate` and commit the result after any `.tsp` change.
+- `actions:lint` runs jactionlint 2.6.0 over `.github/workflows`. Durable exceptions live in `.github/jactionlint.yaml` with a reason and an expiry date; renew or remove them before `2027-05-22`. `.github/workflows/hexlet-check.yml` is generated and must not be edited.
 
 ## Non-obvious constraints
 
