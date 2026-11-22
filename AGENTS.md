@@ -8,7 +8,7 @@
 - `mise.toml` at the root — tool versions and all dev tasks. Local workflow and CI both go through mise.
 - `Dockerfile` and `render.yaml` — multi-stage image (Vite + FastAPI) and Render Blueprint. The container applies migrations, serves the built frontend from FastAPI and listens on `PORT`; Render sets that variable.
 - `opencode.json` — project OpenCode config; connects the hosted Render MCP server (`https://mcp.render.com/mcp`) for deploys and logs.
-- `.github/workflows/opencode.yml` runs the OpenCode agent on `/oc` comments. `.github/workflows/opencode-triage.yml` triages every new issue from a trusted author and skips issues that already carry a state label; README.md, "Автотриаж", describes the filters and limits. Workflow files are human-managed: the OpenCode App has no `workflows` permission, and the `opencode.yml` inline config denies the agent edits under `.github/workflows/`.
+- `.github/workflows/opencode.yml` runs the OpenCode agent on `/oc` comments. `.github/workflows/opencode-triage.yml` triages every new issue from a trusted author and skips issues that already carry a state label; README.md, "Автотриаж", describes the filters and limits. `docs/agents/opencode-review-workflow.yml` is the ready-to-apply `pull_request` review workflow; `REVIEW.md` holds its criteria and `.github/pull_request_template.md` the PR fields it reads; README.md, "Авторевью", explains the design. Workflow files are human-managed: the OpenCode App has no `workflows` permission, and the `opencode.yml` inline config denies the agent edits under `.github/workflows/`.
 - `backend/README.md` — backend setup and conventions. Root `README.md` is the Hexlet template.
 
 ## Commands
