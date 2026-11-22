@@ -34,5 +34,21 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           VERSION: 1.19.6 # pin the OpenCode 1 binary installed by the action
+          # Workflow files are human-managed: the OpenCode App has no
+          # `workflows` permission. Deny edit-tool writes there; the App
+          # permission remains the hard stop for any push.
+          OPENCODE_CONFIG_CONTENT: |-
+            {
+              "permission": {
+                "external_directory": {
+                  "/tmp/*": "allow",
+                  "/home/runner/work/*": "allow"
+                },
+                "edit": {
+                  "*": "allow",
+                  ".github/workflows/*": "deny"
+                }
+              }
+            }
         with:
           model: deepseek/deepseek-flash
