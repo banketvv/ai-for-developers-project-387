@@ -30,7 +30,7 @@ paths:
         - bookings
     post:
       operationId: BookingRoutes_create
-      summary: Забронировать слот
+      summary: Отправить заявку на слот
       parameters: []
       responses:
         "201":
@@ -96,6 +96,54 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       tags:
         - bookings
+    patch:
+      operationId: BookingRoutes_update
+      summary: Подтвердить или отклонить заявку владельцем
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingRead"
+        "403":
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      tags:
+        - bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
   /api/v1/meeting-types:
     get:
       operationId: MeetingTypeRoutes_list
@@ -371,7 +419,7 @@ components:
       properties:
         code:
           type: string
-          description: "Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`."
+          description: "Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `already_decided`."
         message:
           type: string
           description: Человекочитаемое сообщение для показа рядом с формой или экраном.
@@ -426,6 +474,7 @@ components:
         - guest_name
         - guest_email
         - created_at
+        - status
         - meeting_type
       properties:
         id:
@@ -442,8 +491,31 @@ components:
         created_at:
           type: string
           format: date-time
+        status:
+          $ref: "#/components/schemas/BookingStatus"
+          description: "Текущий статус брони: заявка, подтверждена или отклонена."
         meeting_type:
           $ref: "#/components/schemas/BookingMeetingTypeRead"
+    BookingStatus:
+      type: string
+      enum:
+        - pending
+        - confirmed
+        - declined
+      description: |-
+        Статус брони. Новая бронь — заявка `pending`; владелец переводит её
+        в `confirmed` или `declined`, и это решение окончательное.
+    BookingUpdate:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - confirmed
+            - declined
+          description: "Решение владельца: `confirmed` или `declined`; `pending` прислать нельзя."
     DurationMinutes:
       type: integer
       enum:

@@ -11,9 +11,19 @@ union DurationMinutes {
   m60: 60,
 }
 
+/**
+ * Статус брони. Новая бронь — заявка `pending`; владелец переводит её
+ * в `confirmed` или `declined`, и это решение окончательное.
+ */
+union BookingStatus {
+  pending: "pending",
+  confirmed: "confirmed",
+  declined: "declined",
+}
+
 /** Единый конверт ошибки: клиент различает причины по машинному коду. */
 model ApiError {
-  /** Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`. */
+  /** Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `already_decided`. */
   code: string;
   /** Человекочитаемое сообщение для показа рядом с формой или экраном. */
   message: string;
@@ -152,6 +162,8 @@ model BookingRead {
   guest_name: string;
   guest_email: string;
   created_at: utcDateTime;
+  /** Текущий статус брони: заявка, подтверждена или отклонена. */
+  status: BookingStatus;
   meeting_type: BookingMeetingTypeRead;
 }
 
@@ -172,4 +184,9 @@ model BookingCreate {
   @maxLength(320)
   @format("email")
   guest_email: string;
+}
+
+model BookingUpdate {
+  /** Решение владельца: `confirmed` или `declined`; `pending` прислать нельзя. */
+  status: "confirmed" | "declined";
 }

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import field_validator
 
@@ -25,3 +26,5 @@ class BookingCreate(contract.BookingCreate):
 
 BookingMeetingTypeRead = contract.BookingMeetingTypeRead
 BookingRead = contract.BookingRead
+BookingUpdate = contract.BookingUpdate
+BookingStatusValue = Literal["pending", "confirmed", "declined"]

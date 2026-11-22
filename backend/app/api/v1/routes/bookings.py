@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Response
 
 from app.api.cookies import set_session_cookie
-from app.api.deps import NowDep, SessionDep, SettingsDep, ViewerDep
+from app.api.deps import NowDep, OwnerDep, SessionDep, SettingsDep, ViewerDep
 from app.api.responses import error_responses
-from app.schemas.booking import BookingCreate, BookingRead
+from app.schemas.booking import BookingCreate, BookingRead, BookingUpdate
 from app.services.bookings import create_booking as create_booking_service
+from app.services.bookings import decide_booking as decide_booking_service
 from app.services.bookings import get_booking as get_booking_service
 from app.services.bookings import list_bookings as list_bookings_service
 
@@ -50,3 +51,18 @@ async def read_booking(
 ) -> BookingRead:
     """Показывает бронь её гостю и владельцу; остальным отвечает 404."""
     return await get_booking_service(session, booking_id, viewer=viewer)
+
+
+@router.patch(
+    "/{booking_id}",
+    response_model=BookingRead,
+    responses=error_responses(403, 404, 409, 422),
+)
+async def decide_booking(
+    booking_id: int,
+    payload: BookingUpdate,
+    session: SessionDep,
+    owner: OwnerDep,
+) -> BookingRead:
+    """Подтверждает или отклоняет заявку: доступно только владельцу."""
+    return await decide_booking_service(session, booking_id, status=payload.status)

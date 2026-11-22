@@ -14,7 +14,7 @@ export interface paths {
         /** Предстоящие встречи: свои для гостя, все для владельца */
         get: operations["BookingRoutes_list"];
         put?: never;
-        /** Забронировать слот */
+        /** Отправить заявку на слот */
         post: operations["BookingRoutes_create"];
         delete?: never;
         options?: never;
@@ -36,7 +36,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Подтвердить или отклонить заявку владельцем */
+        patch: operations["BookingRoutes_update"];
         trace?: never;
     };
     "/api/v1/meeting-types": {
@@ -149,7 +150,7 @@ export interface components {
     schemas: {
         /** @description Единый конверт ошибки: клиент различает причины по машинному коду. */
         ApiError: {
-            /** @description Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`. */
+            /** @description Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `already_decided`. */
             code: string;
             /** @description Человекочитаемое сообщение для показа рядом с формой или экраном. */
             message: string;
@@ -190,7 +191,22 @@ export interface components {
             guest_email: string;
             /** Format: date-time */
             created_at: string;
+            /** @description Текущий статус брони: заявка, подтверждена или отклонена. */
+            status: components["schemas"]["BookingStatus"];
             meeting_type: components["schemas"]["BookingMeetingTypeRead"];
+        };
+        /**
+         * @description Статус брони. Новая бронь — заявка `pending`; владелец переводит её
+         *     в `confirmed` или `declined`, и это решение окончательное.
+         * @enum {string}
+         */
+        BookingStatus: "pending" | "confirmed" | "declined";
+        BookingUpdate: {
+            /**
+             * @description Решение владельца: `confirmed` или `declined`; `pending` прислать нельзя.
+             * @enum {string}
+             */
+            status: "confirmed" | "declined";
         };
         /**
          * @description Длительность встречи в минутах: владелец выбирает из набора.
@@ -375,6 +391,68 @@ export interface operations {
             };
             /** @description The server cannot find the requested resource. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Client error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BookingRoutes_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingUpdate"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRead"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request conflicts with the current state of the server. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

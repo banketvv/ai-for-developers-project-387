@@ -15,7 +15,7 @@ class ApiError(ContractModel):
     code: Annotated[
         str,
         Field(
-            description="Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`."
+            description="Машинный код: `validation_error`, `forbidden`, `not_found`, `slot_taken`, `already_booked`, `duration_locked`, `already_decided`."
         ),
     ]
     message: Annotated[
@@ -42,6 +42,15 @@ class BookingCreate(ContractModel):
         Field(
             description="Почта гостя: сравнивается с точностью до нормализации (обрезка, нижний регистр).",
             max_length=320,
+        ),
+    ]
+
+
+class BookingUpdate(ContractModel):
+    status: Annotated[
+        Literal["confirmed", "declined"],
+        Field(
+            description="Решение владельца: `confirmed` или `declined`; `pending` прислать нельзя."
         ),
     ]
 
@@ -169,4 +178,8 @@ class BookingRead(ContractModel):
     guest_name: str
     guest_email: str
     created_at: datetime
+    status: Annotated[
+        Literal["pending", "confirmed", "declined"],
+        Field(description="Текущий статус брони: заявка, подтверждена или отклонена."),
+    ]
     meeting_type: BookingMeetingTypeRead

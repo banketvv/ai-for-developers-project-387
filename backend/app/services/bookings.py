@@ -7,8 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.errors import AppError, not_found
-from app.db.models import Booking, MeetingType
-from app.schemas.booking import BookingCreate, BookingMeetingTypeRead, BookingRead
+from app.db.models import LIVE_BOOKING_STATUSES, Booking, BookingStatus, MeetingType
+from app.schemas.booking import (
+    BookingCreate,
+    BookingMeetingTypeRead,
+    BookingRead,
+    BookingStatusValue,
+)
 from app.schemas.meeting_type import DurationMinutes
 from app.services.meeting_types import upcoming_intervals
 from app.services.session import Viewer, normalize_email
@@ -23,6 +28,7 @@ def to_read(booking: Booking, meeting_type: MeetingType) -> BookingRead:
         guest_name=booking.guest_name,
         guest_email=booking.guest_email,
         created_at=booking.created_at,
+        status=cast(BookingStatusValue, booking.status),
         meeting_type=BookingMeetingTypeRead(
             id=meeting_type.id,
             title=meeting_type.title,
@@ -83,6 +89,7 @@ async def create_booking(
             Booking.meeting_type_id == meeting_type.id,
             Booking.guest_email == email,
             Booking.start > now,
+            Booking.status.in_(LIVE_BOOKING_STATUSES),
         )
         .limit(1)
     )
@@ -104,12 +111,13 @@ async def create_booking(
         guest_email=email,
         start=payload.start,
         created_at=now,
+        status=BookingStatus.PENDING.value,
     )
     session.add(booking)
     try:
         await session.commit()
     except IntegrityError:
-        # Гонку за слот разрешает UNIQUE(meeting_type_id, start): проигравший получает отказ.
+        # Гонку за живой слот разрешает частичный уникальный индекс: проигравший получает отказ.
         await session.rollback()
         raise AppError(
             code="slot_taken", message="Это время уже занято", status_code=409
@@ -157,4 +165,28 @@ async def get_booking(
     is_own = viewer.email is not None and normalize_email(viewer.email) == booking.guest_email
     if not viewer.is_owner and not is_own:
         raise _booking_not_found()
+    return to_read(booking, booking.meeting_type)
+
+
+async def decide_booking(
+    session: AsyncSession,
+    booking_id: int,
+    *,
+    status: BookingStatusValue,
+) -> BookingRead:
+    """Принимает окончательное решение по заявке: подтвердить или отклонить."""
+    result = await session.execute(
+        select(Booking).options(joinedload(Booking.meeting_type)).where(Booking.id == booking_id)
+    )
+    booking = result.scalar_one_or_none()
+    if booking is None:
+        raise _booking_not_found()
+    if booking.status != BookingStatus.PENDING.value:
+        raise AppError(
+            code="already_decided",
+            message="Решение по этой брони уже принято",
+            status_code=409,
+        )
+    booking.status = status
+    await session.commit()
     return to_read(booking, booking.meeting_type)
