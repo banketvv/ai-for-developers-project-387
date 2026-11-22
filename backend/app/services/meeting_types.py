@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, not_found
-from app.db.models import Booking, MeetingType
+from app.db.models import LIVE_BOOKING_STATUSES, Booking, MeetingType
 from app.schemas.meeting_type import (
     DurationMinutes,
     MeetingTypeCreate,
@@ -24,7 +24,10 @@ async def upcoming_intervals(session: AsyncSession, now: datetime) -> list[Inter
     rows = await session.execute(
         select(Booking.start, MeetingType.duration_minutes)
         .join(MeetingType, Booking.meeting_type_id == MeetingType.id)
-        .where(Booking.start > now - MAX_DURATION)
+        .where(
+            Booking.start > now - MAX_DURATION,
+            Booking.status.in_(LIVE_BOOKING_STATUSES),
+        )
     )
     intervals: list[Interval] = []
     for start, duration_minutes in rows:
@@ -57,7 +60,12 @@ def to_read(
 async def type_ids_with_upcoming_bookings(session: AsyncSession, now: datetime) -> set[int]:
     """Типы с предстоящими бронями: у них длительность заперта — одним запросом."""
     rows = await session.execute(
-        select(Booking.meeting_type_id).where(Booking.start > now).distinct()
+        select(Booking.meeting_type_id)
+        .where(
+            Booking.start > now,
+            Booking.status.in_(LIVE_BOOKING_STATUSES),
+        )
+        .distinct()
     )
     return set(rows.scalars())
 
@@ -171,6 +179,7 @@ async def has_upcoming_bookings(
         .where(
             Booking.meeting_type_id == meeting_type_id,
             Booking.start > now,
+            Booking.status.in_(LIVE_BOOKING_STATUSES),
         )
         .limit(1)
     )

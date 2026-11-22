@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BookingStatusBadge } from '@/components/booking-status-badge'
 import { Button } from '@/components/ui/button'
 import { listBookings } from '@/lib/bookings'
 import type { BookingRead } from '@/lib/bookings'
@@ -109,12 +110,15 @@ function BookingsPage() {
                   aria-labelledby={`booking-${booking.id}`}
                   className="rounded-xl border border-border bg-card p-6 shadow-sm transition-colors hover:border-brand"
                 >
-                  <h2
-                    id={`booking-${booking.id}`}
-                    className="text-xl font-semibold tracking-tight"
-                  >
-                    {booking.meeting_type.title}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2
+                      id={`booking-${booking.id}`}
+                      className="text-xl font-semibold tracking-tight"
+                    >
+                      {booking.meeting_type.title}
+                    </h2>
+                    <BookingStatusBadge status={booking.status} />
+                  </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {formatInstantDate(booking.start, timeZone)},{' '}
                     {formatSlotTime(booking.start, timeZone)} ·{' '}

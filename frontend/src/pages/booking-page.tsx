@@ -124,7 +124,7 @@ function BookingPage() {
                 </article>
               </Link>
               {isOwner ? (
-                <div className="mt-2">
+                <div className="relative z-10 mt-2">
                   <Link
                     to={`/owner/types/${meetingType.id}/edit`}
                     aria-label={`Изменить ${meetingType.title}`}

@@ -4,6 +4,21 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 
+# Первый слот окна для фиксированного момента: 13:00 по Москве (10:00 UTC).
+FIRST_SLOT = "2026-11-16T10:00:00Z"
+
+
+def booking_payload(meeting_type_id: object, **overrides: object) -> dict[str, object]:
+    """Запрос брони гостя: тест меняет только нужное поле."""
+    payload: dict[str, object] = {
+        "meeting_type_id": meeting_type_id,
+        "start": FIRST_SLOT,
+        "guest_name": "Гость",
+        "guest_email": "guest@example.com",
+    }
+    payload.update(overrides)
+    return payload
+
 
 def owner_session(client: TestClient, settings: Settings) -> None:
     """Входит владельцем: cookie с его почтой."""

@@ -10,3 +10,8 @@ export const DURATION_LOCKED = 'Длительность нельзя измен
 export const OWNER_SESSION_INVALID =
   'Владельческая сессия недействительна: вы вошли с чужим email. Войдите снова.'
 export const LOGIN_AGAIN_LABEL = 'Войти снова'
+export const DECISION_FORBIDDEN =
+  'Подтвердить или отклонить заявку может только владелец'
+export const ALREADY_DECIDED = 'Решение по этой брони уже принято'
+export const DECISION_ERROR =
+  'Не удалось принять решение, попробуйте ещё раз'
