@@ -32,6 +32,19 @@ cd ai-for-developers-project-387
 
 <!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
 
+## OpenCode в GitHub
+
+В репозитории настроен workflow [`.github/workflows/opencode.yml`](.github/workflows/opencode.yml): агент запускается по комментарию к issue или PR и отвечает в том же обсуждении.
+
+- **Команды:** `/oc` или `/opencode` в начале комментария. Доступно владельцу, участникам и коллабораторам репозитория.
+- **Пример:** `/oc explain this issue`.
+- **Модель:** `deepseek/deepseek-flash`. Ключ DeepSeek хранится в секрете `OPENCODE_API_KEY` и передаётся агенту как `DEEPSEEK_API_KEY`.
+- **Одновременность:** запуски по одной задаче выполняются последовательно благодаря `concurrency` по номеру issue; таймаут job — 30 минут.
+- **Права:** `contents: read` и `id-token: write` — только для обмена OIDC-токена на scoped-токен OpenCode App. Код PR не checkout-ится, `persist-credentials: false`.
+- **Доступ к файлам:** агенту разрешены `/tmp/*` и `/home/runner/work/*` (правило `external_directory` в `opencode.json`).
+- **Безопасность:** все action закреплены на полные SHA, версия OpenCode зафиксирована на `1.19.6`, а исключения jactionlint для `dangerous-triggers` и `excessive-permissions` действуют до `2027-05-22`.
+- **Проверка workflow:** `mise run actions:lint`; она входит в общую `mise run check`.
+
 ---
 
 <details>
