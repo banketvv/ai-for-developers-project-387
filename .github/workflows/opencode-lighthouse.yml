@@ -1,10 +1,5 @@
-# ПРЕДЛОЖЕНИЕ, НЕ АКТИВНЫЙ WORKFLOW.
-# Агент не может писать в .github/workflows/: у OpenCode App нет права
-# `workflows`, а inline-конфигурация opencode.yml запрещает правки этого
-# каталога. Человеку нужно перенести файл в
-# .github/workflows/opencode-lighthouse.yml, чтобы аудит заработал. После
-# переноса расписание включится автоматически: GitHub запускает `schedule`
-# только из основной ветки.
+# Ежедневный аудит production-сборки. GitHub запускает schedule только из
+# основной ветки.
 name: OpenCode Lighthouse audit
 
 # Ежедневный аудит production-сборки и ручной запуск для проверки изменений.

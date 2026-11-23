@@ -36,19 +36,19 @@ cd ai-for-developers-project-387
 
 В репозитории настроен workflow [`.github/workflows/opencode.yml`](.github/workflows/opencode.yml): агент запускается по комментарию к issue или PR и отвечает в том же обсуждении.
 
-- **Команды:** `/oc` или `/opencode` в начале комментария. Доступно владельцу, участникам и коллабораторам репозитория.
+- **Команды:** `/oc` или `/opencode` в начале общего комментария к issue/PR или построчного комментария в PR. Доступно владельцу, участникам и коллабораторам репозитория.
 - **Пример:** `/oc explain this issue`.
 - **Модель:** `deepseek/deepseek-flash`. Ключ DeepSeek хранится в секрете `OPENCODE_API_KEY` и передаётся агенту как `DEEPSEEK_API_KEY`.
 - **Одновременность:** запуски по одной задаче выполняются последовательно благодаря `concurrency` по номеру issue; таймаут job — 30 минут.
-- **Права:** `contents: read` и `id-token: write` — только для обмена OIDC-токена на scoped-токен OpenCode App. Код PR не checkout-ится, `persist-credentials: false`.
+- **Права:** budget — `actions: read` и `pull-requests: read`; job модели — `contents: read` и `id-token: write`; отчёт — `issues: write` и `pull-requests: write`. Код PR не checkout-ится, `persist-credentials: false`.
 - **Доступ к файлам:** агенту разрешены `/tmp/*` и `/home/runner/work/*` (правило `external_directory` в `opencode.json`).
 - **Безопасность:** все action закреплены на полные SHA, версия OpenCode зафиксирована на `1.19.6`, а исключения jactionlint для `dangerous-triggers` и `excessive-permissions` действуют до `2027-05-22`.
-- **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`. Предложенная замена `opencode.yml` с лимитом запусков лежит в [`.github/opencode-budget-workflow.proposed.yml`](.github/opencode-budget-workflow.proposed.yml).
+- **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`.
 - **Проверка workflow:** `mise run actions:lint`; она входит в общую `mise run check`.
 
 ## Лимит запусков на PR
 
-Чтобы ограничить расходы, предложенный workflow [`.github/opencode-budget-workflow.proposed.yml`](.github/opencode-budget-workflow.proposed.yml) проверяет бюджет **до вызова модели**. Это предложение: workflow-файлы меняет человек, поэтому файлом нужно заменить `.github/workflows/opencode.yml` — имя файла должно остаться прежним, иначе счётчик не найдёт свою историю.
+Чтобы ограничить расходы, workflow [`.github/workflows/opencode.yml`](.github/workflows/opencode.yml) проверяет бюджет **до вызова модели**. Имя файла `opencode.yml` важно: счётчик читает историю запусков именно этого workflow.
 
 - **Область:** только пул-реквесты. Учитываются `/oc` и `/opencode` в общем обсуждении и в построчных комментариях (`pull_request_review_comment`).
 - **Бюджет:** три попытки на один PR. Каждый допущенный запрос человека к агенту расходует попытку; отмена, таймаут и повторный запуск через Re-run тоже. Новый PR получает новый бюджет, поэтому лимит не ограничивает все расходы по issue.
@@ -73,11 +73,11 @@ cd ai-for-developers-project-387
 
 Критерии ревью собраны в [`REVIEW.md`](REVIEW.md): инварианты календаря, контракт API, данные, frontend, тесты и гигиена PR. Шаблон пул-реквеста — [`.github/pull_request_template.md`](.github/pull_request_template.md); он требует заполнить проверки, риск и способ отката.
 
-Автоматическое ревью на `pull_request` описано в [`.github/opencode-review-workflow.proposed.yml`](.github/opencode-review-workflow.proposed.yml). Это именно предложение: workflow-файлы меняет человек, поэтому файл нужно перенести в `.github/workflows/opencode-review.yml`. После переноса ревью будет оставлять комментарий и необязательный check `OpenCode review`, отменять устаревший прогон при новом коммите и пропускать PR из форков, где недоступны секреты.
+Автоматическое ревью на `pull_request` выполняет [`.github/workflows/opencode-review.yml`](.github/workflows/opencode-review.yml). Ревью оставляет комментарий и необязательный check `OpenCode review`, отменяет устаревший прогон при новом коммите и пропускает PR из форков, где недоступны секреты.
 
 ## Аудит Lighthouse
 
-Регулярный аудит production-сборки описан в предложенном workflow [`.github/opencode-lighthouse-workflow.proposed.yml`](.github/opencode-lighthouse-workflow.proposed.yml). Это предложение: `.github/workflows/` меняет человек, поэтому файл нужно перенести в `.github/workflows/opencode-lighthouse.yml`. GitHub запускает `schedule` только из основной ветки, поэтому после переноса в `main` ежедневное расписание включается само; ручной запуск тоже появляется только после этого.
+Регулярный аудит production-сборки выполняет [`.github/workflows/opencode-lighthouse.yml`](.github/workflows/opencode-lighthouse.yml). GitHub запускает `schedule` только из основной ветки; после появления файла в `main` ежедневное расписание включается само, ручной запуск тоже доступен.
 
 - **Триггеры:** в одном файле `schedule` с cron `42 7 * * *` (каждый день в 07:42 UTC) и `workflow_dispatch` для ручной проверки.
 - **Лимиты:** у задания `timeout-minutes: 20`; `concurrency` с группой `lighthouse-audit` и `cancel-in-progress: false` не даёт аудитам идти параллельно — следующий запуск ждёт текущий.

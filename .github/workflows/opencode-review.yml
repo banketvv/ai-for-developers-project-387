@@ -1,8 +1,4 @@
-# ПРЕДЛОЖЕНИЕ, НЕ АКТИВНЫЙ WORKFLOW.
-# Агент не может писать в .github/workflows/: у OpenCode App нет права
-# `workflows`, а inline-конфигурация opencode.yml запрещает правки этого
-# каталога. Человеку нужно перенести файл в
-# .github/workflows/opencode-review.yml, чтобы авторевью заработало.
+# Автоматическое ревью pull request. Критерии — REVIEW.md.
 name: OpenCode PR review
 
 # Independent review of every same-repository pull request. The criteria live in
