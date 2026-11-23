@@ -75,6 +75,21 @@ cd ai-for-developers-project-387
 
 Автоматическое ревью на `pull_request` описано в [`.github/opencode-review-workflow.proposed.yml`](.github/opencode-review-workflow.proposed.yml). Это именно предложение: workflow-файлы меняет человек, поэтому файл нужно перенести в `.github/workflows/opencode-review.yml`. После переноса ревью будет оставлять комментарий и необязательный check `OpenCode review`, отменять устаревший прогон при новом коммите и пропускать PR из форков, где недоступны секреты.
 
+## Аудит Lighthouse
+
+Регулярный аудит production-сборки описан в предложенном workflow [`.github/opencode-lighthouse-workflow.proposed.yml`](.github/opencode-lighthouse-workflow.proposed.yml). Это предложение: `.github/workflows/` меняет человек, поэтому файл нужно перенести в `.github/workflows/opencode-lighthouse.yml`. GitHub запускает `schedule` только из основной ветки, поэтому после переноса в `main` ежедневное расписание включается само; ручной запуск тоже появляется только после этого.
+
+- **Триггеры:** в одном файле `schedule` с cron `42 7 * * *` (каждый день в 07:42 UTC) и `workflow_dispatch` для ручной проверки.
+- **Лимиты:** у задания `timeout-minutes: 20`; `concurrency` с группой `lighthouse-audit` и `cancel-in-progress: false` не даёт аудитам идти параллельно — следующий запуск ждёт текущий.
+- **Сбор отчёта:** `treosh/lighthouse-ci-action` (закреплён по SHA) гоняет Lighthouse против production-URL `https://call-scheduler-hexlet.onrender.com/`. Настройки — в [`.github/lighthouse/lighthouserc.json`](.github/lighthouse/lighthouserc.json): один прогон и четыре категории (performance, accessibility, best-practices, seo).
+- **Отчёты — только артефакты:** каталог `lighthouse-audit/` добавлен в `.gitignore`. JSON- и HTML-отчёты вместе с выводом агента уходят артефактом `lighthouse-audit-<run_id>` со сроком хранения 30 дней и никогда не коммитятся.
+- **Находки:** проваленные взвешенные проверки Lighthouse. Ключ дедупликации — id правила Lighthouse. Workflow заранее вычитает находки, для которых уже есть открытое issue с меткой `lighthouse` и скрытым маркером `<!-- lighthouse-audit:<id> -->`, поэтому повторный запуск с той же находкой не создаёт дубль.
+- **Агент:** получает prompt с путями к `/tmp/lighthouse-findings.json` (все находки) и `/tmp/lighthouse-new-findings.json` (только новые) и создаёт отдельное issue на каждую новую находку. Заголовок — `[Lighthouse] <id>: <title>`, метка — `lighthouse`.
+- **Права и авторизация:** `contents: read` для checkout, `issues: write` для поиска дублей и создания issue, `id-token: write` для OIDC-обмена на scoped-токен OpenCode App — тот же способ, что и в остальных workflow. Модель — `deepseek/deepseek-flash`, ключ из секрета `OPENCODE_API_KEY`.
+- **Ограничения агента:** файлы правит только в `/tmp`, из shell доступны только команды `gh`, запись в репозиторий, коммиты и push запрещены. Текст отчёта считается данными, а не инструкциями; `.env`-файлы не читаются.
+- **Ручной запуск и результаты:** после переноса файла запуск делается из основной ветки: `Actions → OpenCode Lighthouse audit → Run workflow`. Успешный запуск оставляет артефакт `lighthouse-audit-<run_id>` с `report.json`, `report.html` и `agent-output.md`; вывод агента также виден в логе шага. Разбор проверен на реальном отчёте текущего production (Lighthouse 12.8.2, те же четыре категории): он выделил FCP, LCP, `meta-description` и `robots-txt`; фактические issue создаст первый запуск, потому что workflow-файл ещё не перенесён человеком.
+- **Личные выводы:** агент хорошо подходит для рутинного разбора отчёта и оформления задач, но дедупликацию нельзя целиком отдавать модели. Поэтому workflow сам вычисляет дельту и маркеры, а агенту остаётся оформить текст issue. Слабое место — запуск и расписание невозможно включить из PR: нужен человек, который перенесёт файл в `.github/workflows/`.
+
 ---
 
 <details>

@@ -49,6 +49,10 @@ test-results/
 playwright-report/
 blob-report/
 
+### Lighthouse audit (артефакты, не коммитятся) ###
+lighthouse-audit/
+.lighthouseci/
+
 ### Linters / type checkers ###
 .ruff_cache/
 .mypy_cache/
