@@ -1,12 +1,14 @@
-# Ready-to-apply workflow: move this file to
-# .github/workflows/opencode-review.yml. Workflow files are human-managed
-# because the OpenCode App lacks the `workflows` permission, so an agent
-# cannot activate it. See REVIEW.md for the review criteria.
+# Independent automatic review of the pull request events listed below. The
+# job presents the repository owner as GITHUB_ACTOR so the action's built-in
+# permission check accepts PRs opened by the OpenCode App bot; the job `if`
+# already limits reviews to owner/bot PRs. The scoped App token posts the
+# review. Workflow files are human-managed because the app lacks the
+# `workflows` permission. See REVIEW.md for the review criteria.
 
 name: OpenCode Review
 
-# Independent automatic review of every newly opened pull request. Drafts and
-# pull requests from forks are skipped. The criteria live in REVIEW.md.
+# Independent automatic review of the pull request events listed below. Drafts
+# and pull requests from forks are skipped. The criteria live in REVIEW.md.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -23,21 +25,18 @@ jobs:
   review:
     if: >-
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository && 
+      github.event.pull_request.head.repo.full_name == github.repository &&
       (github.event.pull_request.user.login == github.repository_owner ||
        github.event.pull_request.user.login == 'opencode-agent[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      # Checkout and read-only lookups through `gh`.
+      # Checkout, issue/PR reads through `gh`, and the App token.
       contents: read
       issues: read
-      actions: read
-      checks: read
-      statuses: read
-      pull-requests: write
-      # The OIDC token exchanged for the scoped OpenCode App token, which
-      # posts the review.
+      pull-requests: read
+      # OIDC token exchanged for the scoped OpenCode App token, which posts
+      # the review.
       id-token: write
     steps:
       - name: Checkout repository
@@ -53,6 +52,11 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           VERSION: 1.19.6 # pin the OpenCode 1 binary installed by the action
           GH_TOKEN: ${{ github.token }}
+          # The action checks the actor's write permission. A PR opened by
+          # the bot has actor `opencode-agent[bot]`, which has no collaborator
+          # role, so present the repository owner. The job `if` already limits
+          # reviews to owner/bot PRs in this repository.
+          GITHUB_ACTOR: ${{ github.repository_owner }}
           # Nobody can answer a permission prompt on a runner. Allow the
           # checkout and /tmp, deny the rest of the filesystem, deny edits
           # and keep secret files and doom loops out.

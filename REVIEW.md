@@ -1,8 +1,9 @@
 # Критерии авторевью
 
 Этот файл — источник критериев для независимого автоматического ревью pull request. Workflow
-подготовлен в [`docs/agents/opencode-review-workflow.yml`](docs/agents/opencode-review-workflow.yml)
-и активируется переносом в `.github/workflows/opencode-review.yml`. Ревью выполняется отдельным
+[`.github/workflows/opencode-review-workflow.yml`](.github/workflows/opencode-review-workflow.yml)
+переопределяет `GITHUB_ACTOR` на владельца, чтобы action принял PR, созданный ботом; job `if`
+допускает только PR владельца и `opencode-agent[bot]`. Ревью выполняется отдельным
 запуском OpenCode по навыку [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md).
 
 Ревью идёт по **двум независимым осям**, и их нельзя смешивать или переранжировать:
