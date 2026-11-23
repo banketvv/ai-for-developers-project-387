@@ -2,9 +2,9 @@
 
 Этот файл — источник критериев для независимого автоматического ревью pull request. Workflow
 [`.github/workflows/opencode-review-workflow.yml`](.github/workflows/opencode-review-workflow.yml)
-переопределяет `GITHUB_ACTOR` на владельца, чтобы action принял PR, созданный ботом; job `if`
-допускает только PR владельца и `opencode-agent[bot]`. Ревью выполняется отдельным
-запуском OpenCode по навыку [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md).
+запускает OpenCode CLI напрямую и публикует ревью job-токеном через issues API; OpenCode App и
+проверка актора не участвуют, поэтому PR, созданные ботом, тоже ревьюятся. Ревью выполняется
+отдельным запуском OpenCode по навыку [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md).
 
 Ревью идёт по **двум независимым осям**, и их нельзя смешивать или переранжировать:
 
@@ -15,7 +15,7 @@
 
 ## Как читать контекст
 
-1. Возьми описание PR (`gh pr view <номер> --json title,body,author,baseRefName,headRefName,closes`).
+1. Возьми описание PR (`gh pr view <номер> --json title,body,author,baseRefName,headRefName,closingIssuesReferences`).
 2. Из описания достань ссылки: **исходное обращение**, **спецификация**, **тикеты**,
    **согласование человеком**, **проверки**.
 3. Спецификацию и согласование прочитай по ссылкам. Согласование — это комментарий или issue,

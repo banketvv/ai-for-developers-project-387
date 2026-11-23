@@ -61,15 +61,15 @@ cd ai-for-developers-project-387
 
 ## Авторевью
 
-Независимое автоматическое ревью pull request выполняет workflow [`.github/workflows/opencode-review-workflow.yml`](.github/workflows/opencode-review-workflow.yml). Workflow-файлы остаются человек-управляемыми, потому что у OpenCode App нет права `workflows`. Критерии ревью живут в [`REVIEW.md`](REVIEW.md), а шаблон PR — в [`.github/pull_request_template.md`](.github/pull_request_template.md).
+Независимое автоматическое ревью pull request выполняет workflow [`.github/workflows/opencode-review-workflow.yml`](.github/workflows/opencode-review-workflow.yml): он запускает OpenCode CLI напрямую, без OpenCode App и OIDC, поэтому ревью работает и для PR, созданных ботом. Workflow-файлы остаются человек-управляемыми, потому что у OpenCode App нет права `workflows`. Критерии ревью живут в [`REVIEW.md`](REVIEW.md), а шаблон PR — в [`.github/pull_request_template.md`](.github/pull_request_template.md).
 
 - **Событие:** `pull_request` с типами `opened`, `synchronize`, `reopened`, `ready_for_review`. Черновики и pull request из форков пропускаются; ревьюируются PR владельца и `opencode-agent[bot]`.
 - **Независимость:** отдельный запуск OpenCode по навыку [`code-review`](.agents/skills/code-review/SKILL.md). Агент читает diff и коммиты, но не меняет код.
 - **Критерии:** две независимые оси — «Стандарты» ([`AGENTS.md`](AGENTS.md), конвенции бэкенда и фронтенда, контракт, безопасность) и «Соответствие спецификации»; запахи кода — только judgement calls.
 - **Спецификация и согласование:** ревью читает ссылки из описания PR. Если ссылки нет или она недоступна, а также если изменение выходит за согласованный объём, это попадает в раздел «Пробелы».
 - **Шаблон PR:** просит исходное обращение с `Closes #N`, спецификацию, тикеты, согласование человеком, проверки, риск и способ отката.
-- **Права и лимиты:** `contents: read`, `issues: read`, `pull-requests: read` и `id-token: write` (OIDC → scoped-токен OpenCode App). Job переопределяет `GITHUB_ACTOR` на владельца, чтобы action принял PR, созданный ботом; `if` допускает только PR владельца и `opencode-agent[bot]`. Тайм-аут 20 минут; `concurrency` с `cancel-in-progress: true` отменяет устаревшее ревью того же PR.
-- **Ограничения агента:** запись файлов запрещена (`edit: deny`), чтение `.env` запрещено, комментарий публикуется автоматически; текст PR и diff считаются данными, а не инструкциями.
+- **Права и лимиты:** job модели — `contents: read`, `issues: read`, `pull-requests: read`; отдельный publish-job — `issues: write` и `pull-requests: write` для комментария. Write-токен не попадает в окружение модели; actor-проверка OpenCode action не участвует, поэтому PR бота ревьюится. Тайм-аут 20 минут; `concurrency` с `cancel-in-progress: true` отменяет устаревшее ревью того же PR.
+- **Ограничения агента:** запись файлов запрещена (`edit: deny`), веб-поиск и `webfetch` запрещены, чтение `.env` запрещено; shell ограничен командами `git *`, `gh pr view *`, `gh issue view *`. Job модели read-only, комментарий публикует отдельный publish-job. Текст PR и diff считаются данными, а не инструкциями.
 - **Проверка:** `mise run actions:lint`.
 
 ---
