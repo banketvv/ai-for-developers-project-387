@@ -36,11 +36,12 @@ cd ai-for-developers-project-387
 
 В репозитории настроен workflow [`.github/workflows/opencode.yml`](.github/workflows/opencode.yml): агент запускается по комментарию к issue или PR и отвечает в том же обсуждении.
 
-- **Команды:** `/oc` или `/opencode` в начале комментария. Доступно владельцу, участникам и коллабораторам репозитория.
+- **Команды:** `/oc` или `/opencode` в начале общего комментария к issue/PR или построчного комментария в PR. Доступно владельцу, участникам и коллабораторам репозитория.
 - **Пример:** `/oc explain this issue`.
 - **Модель:** `deepseek/deepseek-flash`. Ключ DeepSeek хранится в секрете `OPENCODE_API_KEY` и передаётся агенту как `DEEPSEEK_API_KEY`.
-- **Одновременность:** запуски по одной задаче выполняются последовательно благодаря `concurrency` по номеру issue; таймаут job — 30 минут.
-- **Права:** `contents: read` и `id-token: write` — только для обмена OIDC-токена на scoped-токен OpenCode App. Код PR не checkout-ится, `persist-credentials: false`.
+- **Одновременность:** запуски по одной задаче выполняются последовательно благодаря `concurrency` по номеру issue/PR; таймаут job — 35 минут, вызов модели — 25 минут.
+- **Предел запусков на PR:** до вызова модели budget-job читает историю Actions и `run_attempt`: на один PR — не больше трёх попыток. `/oc` в общем и построчном комментарии расходует попытку; отмена, таймаут и Re-run тоже. Пропущенные запуски (обычный комментарий, бот, недоверенный автор) не расходуют бюджет. Новый PR получает новый бюджет. После исчерпания отдельное задание без модели публикует `limit_exhausted`, последний SHA, ссылку на логи и статус «нужен человек»; для сбоев предусмотрены `timeout`, `infra` и `agent_failed`. Текст комментария служит только отчётом и бюджет не меняет. Счётчик опирается на сохранённую историю Actions; администратор репозитория может изменить эти условия.
+- **Права:** основной job — `contents: read` и `id-token: write` (OIDC → scoped-токен OpenCode App); budget — `actions: read` и `pull-requests: read`; отчёт — `issues: write` (комментарии в issue и PR) и `pull-requests: read` (последний SHA при сбое budget). Код PR не checkout-ится, `persist-credentials: false`.
 - **Доступ к файлам:** агенту разрешены `/tmp/*` и `/home/runner/work/*` (правило `external_directory` в `opencode.json`).
 - **Безопасность:** все action закреплены на полные SHA, версия OpenCode зафиксирована на `1.19.6`, а исключения jactionlint для `dangerous-triggers` и `excessive-permissions` действуют до `2027-05-22`.
 - **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`.
