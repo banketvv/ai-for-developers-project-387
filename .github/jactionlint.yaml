@@ -4,9 +4,9 @@ profile: default
 ignores:
   - rule: dangerous-triggers
     file: .github/workflows/opencode.yml
-    reason: issue_comment is the feature; the job runs only for /oc comments from OWNER, MEMBER or COLLABORATOR
+    reason: issue_comment and pull_request_review_comment are the feature; the jobs run only for /oc comments on pull requests from OWNER, MEMBER or COLLABORATOR
     expires: "2027-05-22"
   - rule: excessive-permissions
     file: .github/workflows/opencode.yml
-    reason: id-token is required to exchange an OIDC token for the scoped OpenCode App token
+    reason: id-token is required to exchange an OIDC token for the scoped OpenCode App token; actions read reads the PR attempt history and issues/pull-requests write publishes the non-model outcome report and the ready-for-human label
     expires: "2027-05-22"
