@@ -43,8 +43,19 @@ cd ai-for-developers-project-387
 - **Права:** `contents: read` и `id-token: write` — только для обмена OIDC-токена на scoped-токен OpenCode App. Код PR не checkout-ится, `persist-credentials: false`.
 - **Доступ к файлам:** агенту разрешены `/tmp/*` и `/home/runner/work/*` (правило `external_directory` в `opencode.json`).
 - **Безопасность:** все action закреплены на полные SHA, версия OpenCode зафиксирована на `1.19.6`, а исключения jactionlint для `dangerous-triggers` и `excessive-permissions` действуют до `2027-05-22`.
-- **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`.
+- **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`. Предложенная замена `opencode.yml` с лимитом запусков лежит в [`.github/opencode-budget-workflow.proposed.yml`](.github/opencode-budget-workflow.proposed.yml).
 - **Проверка workflow:** `mise run actions:lint`; она входит в общую `mise run check`.
+
+## Лимит запусков на PR
+
+Чтобы ограничить расходы, предложенный workflow [`.github/opencode-budget-workflow.proposed.yml`](.github/opencode-budget-workflow.proposed.yml) проверяет бюджет **до вызова модели**. Это предложение: workflow-файлы меняет человек, поэтому файлом нужно заменить `.github/workflows/opencode.yml` — имя файла должно остаться прежним, иначе счётчик не найдёт свою историю.
+
+- **Область:** только пул-реквесты. Учитываются `/oc` и `/opencode` в общем обсуждении и в построчных комментариях (`pull_request_review_comment`).
+- **Бюджет:** три попытки на один PR. Каждый допущенный запрос человека к агенту расходует попытку; отмена, таймаут и повторный запуск через Re-run тоже. Новый PR получает новый бюджет, поэтому лимит не ограничивает все расходы по issue.
+- **Источник счётчика:** история Actions и `run_attempt` (нужно право `actions: read`). Токен агента не может переписать эту историю, а текст PR-комментария на бюджет не влияет. Состояние сохраняется между запусками, пока история Actions не удалена и конфигурация workflow не изменена; администратор репозитория может обойти оба условия.
+- **Права:** `actions: read` и `pull-requests: read` для проверки бюджета и головы PR, `id-token: write` для scoped-токена OpenCode App; отчёт публикует отдельное задание без модели с `issues: write` и `pull-requests: write` (комментарий и метка `ready-for-human`).
+- **Исчерпание:** `/oc` после трёх попыток завершается без вызова модели. Отдельное задание без модели публикует причину `limit_exhausted`, последний SHA, ссылку на логи и ставит метку `ready-for-human` («нужен человек»).
+- **Причины сбоя:** таймаут вызова — `timeout`, сбой подготовки инструмента или отсутствие `OPENCODE_API_KEY` — `infra`, прочая ошибка агента — `agent_failed`. Итог публикует то же задание без модели; следующее действие выбирает человек, автоматического цикла исправлений нет.
 
 ## Автотриаж
 
