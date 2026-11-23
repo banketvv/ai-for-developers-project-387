@@ -10,37 +10,40 @@ import { MeetingTypeEditPage } from '@/pages/meeting-type-edit-page'
 import { MeetingTypeFormPage } from '@/pages/meeting-type-form-page'
 import { OwnerPage } from '@/pages/owner-page'
 import { SessionProvider } from '@/lib/session'
+import { TimeZoneProvider } from '@/lib/timezone'
 
 function AppRoutes() {
   return (
-    <SessionProvider>
-      <Routes>
-        <Route element={<SiteLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/booking" element={<BookingPage />} />
-          <Route
-            path="/booking/:meetingTypeId"
-            element={<MeetingTypeCalendarPage />}
-          />
-          <Route
-            path="/booking/:meetingTypeId/:start"
-            element={<BookingFormPage />}
-          />
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route
-            path="/bookings/:bookingId"
-            element={<BookingConfirmationPage />}
-          />
-          <Route path="/owner" element={<OwnerPage />} />
-          <Route path="/owner/types/new" element={<MeetingTypeFormPage />} />
-          <Route
-            path="/owner/types/:meetingTypeId/edit"
-            element={<MeetingTypeEditPage />}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </SessionProvider>
+    <TimeZoneProvider>
+      <SessionProvider>
+        <Routes>
+          <Route element={<SiteLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route
+              path="/booking/:meetingTypeId"
+              element={<MeetingTypeCalendarPage />}
+            />
+            <Route
+              path="/booking/:meetingTypeId/:start"
+              element={<BookingFormPage />}
+            />
+            <Route path="/bookings" element={<BookingsPage />} />
+            <Route
+              path="/bookings/:bookingId"
+              element={<BookingConfirmationPage />}
+            />
+            <Route path="/owner" element={<OwnerPage />} />
+            <Route path="/owner/types/new" element={<MeetingTypeFormPage />} />
+            <Route
+              path="/owner/types/:meetingTypeId/edit"
+              element={<MeetingTypeEditPage />}
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </SessionProvider>
+    </TimeZoneProvider>
   )
 }
 
