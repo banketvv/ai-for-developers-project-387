@@ -24,8 +24,12 @@ const MEETING_TYPE: MeetingTypeRead = {
   duration_locked: false,
 }
 
-function slot(iso: string, available = true): SlotRead {
-  return { start: iso, available }
+function slot(
+  iso: string,
+  available = true,
+  bookingStatus: SlotRead['booking_status'] = null,
+): SlotRead {
+  return { start: iso, available, booking_status: bookingStatus }
 }
 
 // Понедельник 16 ноября 2026, 09:00–18:00 по Москве: 06:00–14:00 UTC.
@@ -117,6 +121,35 @@ describe('MeetingTypeCalendarPage', () => {
     expect(screen.getByRole('link', { name: '13:00' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '18:00' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '14:00' })).toBeDisabled()
+  })
+
+  it('подсвечивает занятые слоты статусом брони текущего типа', async () => {
+    serve(MEETING_TYPE, [
+      slot('2026-11-16T06:00:00Z', false, 'pending'),
+      slot('2026-11-16T07:00:00Z', false, 'confirmed'),
+      slot('2026-11-16T08:00:00Z', false, null),
+      slot('2026-11-16T09:00:00Z'),
+    ])
+
+    renderCalendar()
+
+    const pending = await screen.findByRole('button', {
+      name: '09:00 — Ожидает подтверждения',
+    })
+    expect(pending).toBeDisabled()
+    expect(pending).toHaveClass('bg-amber-100')
+
+    const confirmed = screen.getByRole('button', {
+      name: '10:00 — Подтверждена',
+    })
+    expect(confirmed).toBeDisabled()
+    expect(confirmed).toHaveClass('bg-emerald-100')
+
+    // Слот, занятый бронью другого типа, остаётся недоступным без статуса.
+    const otherType = screen.getByRole('button', { name: '11:00' })
+    expect(otherType).toBeDisabled()
+    expect(otherType).not.toHaveClass('bg-amber-100')
+    expect(otherType).not.toHaveClass('bg-emerald-100')
   })
 
   it('открывает оформление записи по клику на слот', async () => {

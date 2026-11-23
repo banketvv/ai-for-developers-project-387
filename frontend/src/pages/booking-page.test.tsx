@@ -150,7 +150,13 @@ describe('BookingPage', () => {
       http.get(meetingTypeUrl(2), () => HttpResponse.json(type)),
       http.get(slotsUrl(2), () =>
         HttpResponse.json({
-          slots: [{ start: '2026-11-16T06:00:00Z', available: true }],
+          slots: [
+            {
+              start: '2026-11-16T06:00:00Z',
+              available: true,
+              booking_status: null,
+            },
+          ],
         }),
       ),
     )

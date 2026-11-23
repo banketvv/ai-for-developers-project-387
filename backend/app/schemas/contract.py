@@ -157,6 +157,12 @@ class SlotRead(ContractModel):
         bool,
         Field(description="`false`, если слот пересекается с предстоящей бронью любого типа."),
     ]
+    booking_status: Annotated[
+        Literal["pending", "confirmed", "declined"] | None,
+        Field(
+            description="Статус живой брони текущего типа, занимающей слот: `pending` или\n`confirmed`. `null`, если слот свободен или занят бронью другого типа —\nтакие брони не раскрываются в сетке."
+        ),
+    ]
 
 
 class SlotsRead(ContractModel):

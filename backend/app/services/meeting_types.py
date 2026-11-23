@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, not_found
 from app.db.models import LIVE_BOOKING_STATUSES, Booking, MeetingType
+from app.schemas.booking import BookingStatusValue
 from app.schemas.meeting_type import (
     DurationMinutes,
     MeetingTypeCreate,
@@ -35,6 +36,42 @@ async def upcoming_intervals(session: AsyncSession, now: datetime) -> list[Inter
         if end > now:
             intervals.append((start, end))
     return intervals
+
+
+async def current_type_intervals(
+    session: AsyncSession,
+    meeting_type_id: int,
+    *,
+    duration_minutes: int,
+    now: datetime,
+) -> list[tuple[datetime, datetime, str]]:
+    """Живые брони текущего типа: отрезок и статус для подсветки слотов."""
+    rows = await session.execute(
+        select(Booking.start, Booking.status).where(
+            Booking.meeting_type_id == meeting_type_id,
+            Booking.start > now - MAX_DURATION,
+            Booking.status.in_(LIVE_BOOKING_STATUSES),
+        )
+    )
+    step = timedelta(minutes=duration_minutes)
+    intervals: list[tuple[datetime, datetime, str]] = []
+    for start, status in rows:
+        end = start + step
+        if end > now:
+            intervals.append((start, end, status))
+    return intervals
+
+
+def booking_status_at(
+    start: datetime,
+    end: datetime,
+    intervals: list[tuple[datetime, datetime, str]],
+) -> BookingStatusValue | None:
+    """Статус живой брони текущего типа, пересекающей слот; иначе `None`."""
+    for busy_start, busy_end, status in intervals:
+        if start < busy_end and busy_start < end:
+            return cast(BookingStatusValue, status)
+    return None
 
 
 def to_read(
@@ -250,14 +287,25 @@ async def list_slots(
     now: datetime,
     timezone: str,
 ) -> SlotsRead:
-    """Все слоты окна типа встречи: занятые входят с признаком недоступности."""
+    """Все слоты окна типа встречи: занятые входят с признаком и статусом брони."""
     meeting_type = await session.get(MeetingType, meeting_type_id)
     if meeting_type is None:
         raise _meeting_type_not_found()
     busy = await upcoming_intervals(session, now)
+    booked = await current_type_intervals(
+        session,
+        meeting_type.id,
+        duration_minutes=meeting_type.duration_minutes,
+        now=now,
+    )
+    step = timedelta(minutes=meeting_type.duration_minutes)
     return SlotsRead(
         slots=[
-            SlotRead(start=start, available=available)
+            SlotRead(
+                start=start,
+                available=available,
+                booking_status=booking_status_at(start, start + step, booked),
+            )
             for start, available in slot_grid(
                 meeting_type.duration_minutes,
                 now=now,

@@ -17,7 +17,7 @@ async def read_slots(
     settings: SettingsDep,
     now: NowDep,
 ) -> SlotsRead:
-    """Все слоты окна типа встречи: занятые приходят с признаком недоступности."""
+    """Все слоты окна типа встречи: занятые приходят с признаком и статусом брони."""
     return await list_slots(
         session,
         meeting_type_id,

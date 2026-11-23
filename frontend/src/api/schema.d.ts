@@ -277,6 +277,12 @@ export interface components {
             start: string;
             /** @description `false`, если слот пересекается с предстоящей бронью любого типа. */
             available: boolean;
+            /**
+             * @description Статус живой брони текущего типа, занимающей слот: `pending` или
+             *     `confirmed`. `null`, если слот свободен или занят бронью другого типа —
+             *     такие брони не раскрываются в сетке.
+             */
+            booking_status: components["schemas"]["BookingStatus"] | null;
         };
         /**
          * @description Все слоты фиксированного 14-дневного окна, включая занятые.

@@ -58,7 +58,11 @@ def test_busy_slots_are_returned_as_unavailable_for_every_type(
     ]
 
     hour_at_fourteen = next(slot for slot in hour_slots if slot["start"] == "2026-11-16T11:00:00Z")
-    assert hour_at_fourteen == {"start": "2026-11-16T11:00:00Z", "available": False}
+    assert hour_at_fourteen == {
+        "start": "2026-11-16T11:00:00Z",
+        "available": False,
+        "booking_status": "pending",
+    }
     half_hour_by_start = {slot["start"]: slot["available"] for slot in half_hour_slots}
     # Пересечение считается по интервалам: 14:00–14:30 и 14:30–15:00 заняты,
     # соседние 13:30 и 15:00 свободны.
@@ -66,6 +70,72 @@ def test_busy_slots_are_returned_as_unavailable_for_every_type(
     assert half_hour_by_start["2026-11-16T11:00:00Z"] is False
     assert half_hour_by_start["2026-11-16T11:30:00Z"] is False
     assert half_hour_by_start["2026-11-16T12:00:00Z"] is True
+    # Бронь другого типа занимает слот, но её статус не раскрывается.
+    assert all(slot["booking_status"] is None for slot in half_hour_slots)
+
+
+def test_slots_expose_status_of_live_bookings_of_the_current_type_only(
+    client: TestClient, settings: Settings, db: Session, now: datetime
+) -> None:
+    hour_type = create_meeting_type(client, settings, title="Час", duration_minutes=60)
+    other_type = create_meeting_type(client, settings, title="Другой", duration_minutes=60)
+    db.add_all(
+        [
+            Booking(
+                meeting_type_id=hour_type["id"],
+                guest_name="Первый",
+                guest_email="pending@example.com",
+                start=datetime(2026, 11, 16, 10, 0),
+                created_at=now,
+                status="pending",
+            ),
+            Booking(
+                meeting_type_id=hour_type["id"],
+                guest_name="Второй",
+                guest_email="confirmed@example.com",
+                start=datetime(2026, 11, 16, 11, 0),
+                created_at=now,
+                status="confirmed",
+            ),
+            Booking(
+                meeting_type_id=hour_type["id"],
+                guest_name="Третий",
+                guest_email="declined@example.com",
+                start=datetime(2026, 11, 16, 12, 0),
+                created_at=now,
+                status="declined",
+            ),
+            Booking(
+                meeting_type_id=other_type["id"],
+                guest_name="Чужой",
+                guest_email="other@example.com",
+                start=datetime(2026, 11, 16, 13, 0),
+                created_at=now,
+                status="confirmed",
+            ),
+        ]
+    )
+    db.commit()
+
+    slots = {
+        slot["start"]: slot
+        for slot in client.get(f"/api/v1/meeting-types/{hour_type['id']}/slots").json()["slots"]
+    }
+
+    assert slots["2026-11-16T10:00:00Z"]["booking_status"] == "pending"
+    assert slots["2026-11-16T11:00:00Z"]["booking_status"] == "confirmed"
+    # Отклонённая бронь не живая: слот свободен и статуса не имеет.
+    assert slots["2026-11-16T12:00:00Z"] == {
+        "start": "2026-11-16T12:00:00Z",
+        "available": True,
+        "booking_status": None,
+    }
+    # Чужая бронь занимает слот, но её статус не раскрывается в сетке этого типа.
+    assert slots["2026-11-16T13:00:00Z"] == {
+        "start": "2026-11-16T13:00:00Z",
+        "available": False,
+        "booking_status": None,
+    }
 
 
 @pytest.mark.parametrize(
@@ -86,7 +156,11 @@ def test_slot_grid_ends_exactly_at_closing_time(
 
     slots = client.get(f"/api/v1/meeting-types/{created['id']}/slots").json()["slots"]
 
-    assert slots[-1] == {"start": last_start, "available": True}
+    assert slots[-1] == {
+        "start": last_start,
+        "available": True,
+        "booking_status": None,
+    }
 
 
 def test_grid_drops_a_tail_that_does_not_fit_before_closing() -> None:

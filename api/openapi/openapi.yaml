@@ -646,6 +646,7 @@ components:
       required:
         - start
         - available
+        - booking_status
       properties:
         start:
           type: string
@@ -656,6 +657,14 @@ components:
         available:
           type: boolean
           description: "`false`, если слот пересекается с предстоящей бронью любого типа."
+        booking_status:
+          anyOf:
+            - $ref: "#/components/schemas/BookingStatus"
+            - type: "null"
+          description: |-
+            Статус живой брони текущего типа, занимающей слот: `pending` или
+            `confirmed`. `null`, если слот свободен или занят бронью другого типа —
+            такие брони не раскрываются в сетке.
     SlotsRead:
       type: object
       required:

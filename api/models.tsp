@@ -134,6 +134,12 @@ model SlotRead {
   start: utcDateTime;
   /** `false`, если слот пересекается с предстоящей бронью любого типа. */
   available: boolean;
+  /**
+   * Статус живой брони текущего типа, занимающей слот: `pending` или
+   * `confirmed`. `null`, если слот свободен или занят бронью другого типа —
+   * такие брони не раскрываются в сетке.
+   */
+  booking_status: BookingStatus | null;
 }
 
 /**
