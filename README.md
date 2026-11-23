@@ -58,6 +58,12 @@ cd ai-for-developers-project-387
 - **Метки:** недостающие `needs-triage`, `needs-info` и `ready-for-human` workflow создаёт при первом запуске, если их ещё нет; существующие метки не меняются.
 - **Модель:** та же, что в `opencode.yml`, — `deepseek/deepseek-flash`; ключ передаётся из секрета `OPENCODE_API_KEY`.
 
+## Ревью изменений
+
+Критерии ревью собраны в [`REVIEW.md`](REVIEW.md): инварианты календаря, контракт API, данные, frontend, тесты и гигиена PR. Шаблон пул-реквеста — [`.github/pull_request_template.md`](.github/pull_request_template.md); он требует заполнить проверки, риск и способ отката.
+
+Автоматическое ревью на `pull_request` описано в [`.github/opencode-review-workflow.proposed.yml`](.github/opencode-review-workflow.proposed.yml). Это именно предложение: workflow-файлы меняет человек, поэтому файл нужно перенести в `.github/workflows/opencode-review.yml`. После переноса ревью будет оставлять комментарий и необязательный check `OpenCode review`, отменять устаревший прогон при новом коммите и пропускать PR из форков, где недоступны секреты.
+
 ---
 
 <details>
