@@ -240,8 +240,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       issues: write
-      # The report falls back to the PR head SHA when the budget job failed.
-      pull-requests: read
+      # `gh pr comment` uses GraphQL addComment and needs pull-requests write.
+      # The report also falls back to the PR head SHA when the budget job failed.
+      pull-requests: write
     steps:
       - name: Publish outcome comment
         env:
