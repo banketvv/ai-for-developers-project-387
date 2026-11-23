@@ -9,7 +9,7 @@ name: OpenCode Review
 # pull requests from forks are skipped. The criteria live in REVIEW.md.
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Grant nothing by default; the job asks only for what it needs.
 permissions: {}
@@ -23,14 +23,19 @@ jobs:
   review:
     if: >-
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository && 
+      (github.event.pull_request.user.login == github.repository_owner ||
+       github.event.pull_request.user.login == 'opencode-agent[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       # Checkout and read-only lookups through `gh`.
       contents: read
       issues: read
-      pull-requests: read
+      actions: read
+      checks: read
+      statuses: read
+      pull-requests: write
       # The OIDC token exchanged for the scoped OpenCode App token, which
       # posts the review.
       id-token: write
