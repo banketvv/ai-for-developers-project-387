@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { AppRoutes } from '@/App'
 import type { BookingRead } from '@/lib/bookings'
+import { TIME_ZONE_COOKIE } from '@/lib/timezone'
 import { bookingsUrl, server, sessionUrl } from '@/test/server'
 
 const EARLIER: BookingRead = {
@@ -79,6 +80,23 @@ describe('BookingsPage', () => {
     const laterCard = headings[1].closest('a')
     expect(earlierCard).toHaveAttribute('href', '/bookings/42')
     expect(laterCard).toHaveAttribute('href', '/bookings/43')
+  })
+
+  it('показывает брони в выбранном вручную поясе', async () => {
+    document.cookie = `${TIME_ZONE_COOKIE}=UTC; path=/`
+    server.use(
+      guestSession('ivan@example.com'),
+      http.get(bookingsUrl, () => HttpResponse.json([EARLIER, LATER])),
+    )
+
+    renderBookings()
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Знакомство' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveTextContent('10:00')
+    expect(screen.getByRole('main')).toHaveTextContent('11:00')
+    expect(screen.getByRole('main')).not.toHaveTextContent('13:00')
   })
 
   it('показывает пустое состояние без поля ввода email', async () => {

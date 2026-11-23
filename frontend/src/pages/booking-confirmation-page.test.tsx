@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { AppRoutes } from '@/App'
 import type { BookingRead } from '@/lib/bookings'
+import { TIME_ZONE_COOKIE } from '@/lib/timezone'
 import { bookingUrl, bookingsUrl, server, sessionUrl } from '@/test/server'
 
 const BOOKING: BookingRead = {
@@ -66,6 +67,22 @@ describe('BookingConfirmationPage', () => {
     expect(
       within(main).getByRole('link', { name: 'Записаться ещё раз' }),
     ).toHaveAttribute('href', '/booking')
+  })
+
+  it('показывает время в выбранном вручную поясе', async () => {
+    document.cookie = `${TIME_ZONE_COOKIE}=UTC; path=/`
+    server.use(
+      http.get(bookingUrl(BOOKING.id), () => HttpResponse.json(BOOKING)),
+    )
+
+    renderConfirmation()
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Бронь №42' }),
+    ).toBeInTheDocument()
+    // 06:00 UTC — это 09:00 по Москве, то есть пояс из cookie применился.
+    expect(screen.getByText(/06:00/)).toBeInTheDocument()
+    expect(screen.queryByText(/09:00/)).not.toBeInTheDocument()
   })
 
   it('не создаёт бронь при перезагрузке страницы подтверждения', async () => {

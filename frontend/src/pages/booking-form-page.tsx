@@ -10,12 +10,12 @@ import {
   formatInstantDate,
   formatSlotTime,
   timeZoneName,
-  viewerTimeZone,
 } from '@/lib/datetime'
 import { durationLabel, getMeetingType } from '@/lib/meeting-types'
 import type { MeetingTypeRead } from '@/lib/meeting-types'
 import { LOAD_ERROR, RETRY_LABEL, SUBMIT_ERROR } from '@/lib/messages'
 import { useSession } from '@/lib/session'
+import { useTimeZone } from '@/lib/timezone'
 
 const NAME_MAX_LENGTH = 100
 // Та же проверка, что и на сервере: форма не отправляет заведомо неверный адрес.
@@ -37,8 +37,8 @@ function BookingFormPage() {
   const start = params.start ?? ''
   const navigate = useNavigate()
   const { email: sessionEmail, reload } = useSession()
-  // Время показывается в поясе смотрящего; пояс подписан рядом со слотом.
-  const timeZone = viewerTimeZone()
+  // Время показывается в выбранном поясе; пояс подписан рядом со слотом.
+  const { timeZone } = useTimeZone()
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [meetingType, setMeetingType] = useState<MeetingTypeRead | null>(null)
   const [name, setName] = useState('')

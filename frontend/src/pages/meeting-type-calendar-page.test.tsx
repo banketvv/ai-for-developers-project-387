@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { AppRoutes } from '@/App'
 import type { MeetingTypeRead } from '@/lib/meeting-types'
 import type { SlotRead } from '@/lib/slots'
+import { TIME_ZONE_COOKIE } from '@/lib/timezone'
 import { meetingTypeUrl, server, slotsUrl } from '@/test/server'
 
 // Время показывается в поясе смотрящего. Чтобы утверждения не зависели от
@@ -72,10 +73,6 @@ function timeZoneName(): string {
   return parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
 }
 
-function occurrences(text: string, needle: string): number {
-  return text.split(needle).length - 1
-}
-
 describe('MeetingTypeCalendarPage', () => {
   it('показывает месяц, активные дни и слоты дня в поясе смотрящего', async () => {
     serve(MEETING_TYPE, [...MONDAY_SLOTS, ...TUESDAY_SLOTS])
@@ -108,7 +105,7 @@ describe('MeetingTypeCalendarPage', () => {
     expect(heading).toHaveTextContent('понедельник, 16 ноября')
     const zone = timeZoneName()
     expect(zone).not.toBe('')
-    expect(occurrences(document.body.textContent ?? '', zone)).toBe(1)
+    expect(heading).toHaveTextContent(zone)
 
     // Слоты идут от 09:00 с шагом в час; 18:00 не начинается, поэтому его нет.
     expect(
@@ -267,5 +264,55 @@ describe('MeetingTypeCalendarPage', () => {
     expect(
       screen.getByRole('button', { name: 'Следующий месяц' }),
     ).toBeDisabled()
+  })
+
+  it('переключает пояс вручную и запоминает выбор в cookie', async () => {
+    const user = userEvent.setup()
+    serve(MEETING_TYPE, MONDAY_SLOTS)
+
+    renderCalendar()
+
+    const select = await screen.findByLabelText('Часовой пояс')
+    expect(select).toHaveValue('auto')
+    // Ждём загрузку слотов: 06:00 UTC — это 09:00 по Москве.
+    await screen.findByRole('link', { name: '09:00' })
+    expect(
+      screen.queryByRole('link', { name: '06:00' }),
+    ).not.toBeInTheDocument()
+
+    await user.selectOptions(select, 'UTC')
+
+    expect(select).toHaveValue('UTC')
+    expect(await screen.findByRole('link', { name: '06:00' })).toHaveAttribute(
+      'href',
+      '/booking/7/2026-11-16T06%3A00%3A00Z',
+    )
+    expect(document.cookie).toContain(`${TIME_ZONE_COOKIE}=UTC`)
+  })
+
+  it('применяет пояс из cookie при загрузке', async () => {
+    document.cookie = `${TIME_ZONE_COOKIE}=UTC; path=/`
+    serve(MEETING_TYPE, MONDAY_SLOTS)
+
+    renderCalendar()
+
+    expect(await screen.findByLabelText('Часовой пояс')).toHaveValue('UTC')
+    expect(await screen.findByRole('link', { name: '06:00' })).toHaveAttribute(
+      'href',
+      '/booking/7/2026-11-16T06%3A00%3A00Z',
+    )
+  })
+
+  it('игнорирует неизвестный пояс из cookie и определяет автоматически', async () => {
+    document.cookie = `${TIME_ZONE_COOKIE}=Mars/Olympus; path=/`
+    serve(MEETING_TYPE, MONDAY_SLOTS)
+
+    renderCalendar()
+
+    expect(await screen.findByLabelText('Часовой пояс')).toHaveValue('auto')
+    expect(await screen.findByRole('link', { name: '09:00' })).toHaveAttribute(
+      'href',
+      '/booking/7/2026-11-16T06%3A00%3A00Z',
+    )
   })
 })

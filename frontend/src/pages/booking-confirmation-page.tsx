@@ -9,7 +9,6 @@ import {
   formatInstantDate,
   formatSlotTime,
   timeZoneName,
-  viewerTimeZone,
 } from '@/lib/datetime'
 import { durationLabel } from '@/lib/meeting-types'
 import {
@@ -20,6 +19,7 @@ import {
   RETRY_LABEL,
 } from '@/lib/messages'
 import { useSession } from '@/lib/session'
+import { useTimeZone } from '@/lib/timezone'
 
 type LoadStatus = 'loading' | 'ready' | 'error' | 'missing'
 
@@ -38,8 +38,8 @@ function BookingConfirmationPage() {
   const params = useParams()
   const bookingId = Number(params.bookingId)
   const { isOwner } = useSession()
-  // Время показывается в поясе смотрящего; пояс подписан рядом со временем.
-  const timeZone = viewerTimeZone()
+  // Время показывается в выбранном поясе; пояс подписан рядом со временем.
+  const { timeZone } = useTimeZone()
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [booking, setBooking] = useState<BookingRead | null>(null)
   const [deciding, setDeciding] = useState<BookingUpdate['status'] | null>(null)

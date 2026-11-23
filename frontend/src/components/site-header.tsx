@@ -1,5 +1,6 @@
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
+import { TimeZoneSelect } from '@/components/time-zone-select'
 
 const navItems = [
   { to: '/booking', label: 'Записаться' },
@@ -33,7 +34,8 @@ function SiteHeader() {
         </nav>
       </div>
       <div className="border-t border-border/60">
-        <div className="mx-auto flex w-full max-w-6xl justify-end px-6 py-1">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-6 py-1">
+          <TimeZoneSelect />
           <Link
             to="/owner"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"

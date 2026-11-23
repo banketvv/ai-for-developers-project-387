@@ -8,17 +8,17 @@ import {
   formatInstantDate,
   formatSlotTime,
   timeZoneName,
-  viewerTimeZone,
 } from '@/lib/datetime'
 import { durationLabel } from '@/lib/meeting-types'
 import { LOAD_ERROR, RETRY_LABEL } from '@/lib/messages'
 import { useSession } from '@/lib/session'
+import { useTimeZone } from '@/lib/timezone'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 
 function BookingsPage() {
-  // Пояс смотрящего подписан один раз на весь список.
-  const timeZone = viewerTimeZone()
+  // Выбранный пояс подписан один раз на весь список.
+  const { timeZone } = useTimeZone()
   const { email, isOwner, logOut } = useSession()
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [bookings, setBookings] = useState<BookingRead[]>([])

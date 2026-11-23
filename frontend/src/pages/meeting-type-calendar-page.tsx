@@ -3,16 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import { MonthCalendar } from '@/components/month-calendar'
 import { SlotGrid } from '@/components/slot-grid'
 import { Button } from '@/components/ui/button'
-import {
-  formatDayLabel,
-  timeZoneName,
-  viewerTimeZone,
-} from '@/lib/datetime'
+import { formatDayLabel, timeZoneName } from '@/lib/datetime'
 import { durationLabel, getMeetingType } from '@/lib/meeting-types'
 import type { MeetingTypeRead } from '@/lib/meeting-types'
 import { LOAD_ERROR, RETRY_LABEL } from '@/lib/messages'
 import { groupSlotsByDay, listSlots } from '@/lib/slots'
 import type { SlotRead } from '@/lib/slots'
+import { useTimeZone } from '@/lib/timezone'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 
@@ -33,8 +30,8 @@ function monthOrdinal({ year, monthIndex }: MonthCursor): number {
 function MeetingTypeCalendarPage() {
   const params = useParams()
   const meetingTypeId = Number(params.meetingTypeId)
-  // Время показывается в поясе смотрящего; пояс подписан один раз в заголовке.
-  const timeZone = viewerTimeZone()
+  // Время показывается в выбранном поясе; пояс подписан один раз в заголовке.
+  const { timeZone } = useTimeZone()
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [meetingType, setMeetingType] = useState<MeetingTypeRead | null>(null)
   const [slots, setSlots] = useState<SlotRead[]>([])
