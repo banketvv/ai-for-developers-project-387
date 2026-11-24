@@ -28,6 +28,16 @@ const LATER: BookingRead = {
   meeting_type: { id: 8, title: 'Разбор', duration_minutes: 30 },
 }
 
+const DECLINED: BookingRead = {
+  id: 44,
+  start: '2026-11-16T12:00:00Z',
+  guest_name: 'Пётр',
+  guest_email: 'petr@example.com',
+  created_at: '2026-11-15T09:00:00',
+  status: 'declined',
+  meeting_type: { id: 9, title: 'Отказ', duration_minutes: 45 },
+}
+
 function guestSession(email: string | null) {
   return http.get(sessionUrl, () =>
     HttpResponse.json({
@@ -167,6 +177,93 @@ describe('BookingsPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Сменить email' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('показывает владельцу сводку по слотам без учёта отклонённых броней', async () => {
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () =>
+        HttpResponse.json([EARLIER, LATER, DECLINED]),
+      ),
+    )
+
+    renderBookings()
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Знакомство' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('group', { name: 'Забронировано' }),
+    ).toHaveTextContent('1')
+    expect(
+      screen.getByRole('group', { name: 'Требуют согласования' }),
+    ).toHaveTextContent('1')
+    expect(
+      screen.getByRole('group', { name: 'Всего слотов' }),
+    ).toHaveTextContent('2')
+  })
+
+  it('не показывает гостю сводку по слотам', async () => {
+    server.use(
+      guestSession('ivan@example.com'),
+      http.get(bookingsUrl, () =>
+        HttpResponse.json([EARLIER, LATER, DECLINED]),
+      ),
+    )
+
+    renderBookings()
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Знакомство' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('group', { name: 'Забронировано' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Всего слотов')).not.toBeInTheDocument()
+  })
+
+  it('показывает владельцу нулевую сводку при пустом списке', async () => {
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([])),
+    )
+
+    renderBookings()
+
+    expect(
+      await screen.findByText(/Пока нет предстоящих встреч/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('group', { name: 'Забронировано' }),
+    ).toHaveTextContent('0')
+    expect(
+      screen.getByRole('group', { name: 'Требуют согласования' }),
+    ).toHaveTextContent('0')
+    expect(
+      screen.getByRole('group', { name: 'Всего слотов' }),
+    ).toHaveTextContent('0')
+  })
+
+  it('показывает владельцу нулевую сводку, когда есть только отклонённые брони', async () => {
+    server.use(
+      ownerSession(),
+      http.get(bookingsUrl, () => HttpResponse.json([DECLINED])),
+    )
+
+    renderBookings()
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Отказ' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('group', { name: 'Забронировано' }),
+    ).toHaveTextContent('0')
+    expect(
+      screen.getByRole('group', { name: 'Требуют согласования' }),
+    ).toHaveTextContent('0')
+    expect(
+      screen.getByRole('group', { name: 'Всего слотов' }),
+    ).toHaveTextContent('0')
   })
 
   it('смена email очищает cookie и показывает пустое состояние', async () => {

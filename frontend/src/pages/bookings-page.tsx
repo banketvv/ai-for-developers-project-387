@@ -16,6 +16,49 @@ import { useTimeZone } from '@/lib/timezone'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 
+type SlotSummary = {
+  confirmed: number
+  pending: number
+  total: number
+}
+
+function summarizeSlots(bookings: BookingRead[]): SlotSummary {
+  let confirmed = 0
+  let pending = 0
+  for (const booking of bookings) {
+    if (booking.status === 'confirmed') {
+      confirmed += 1
+    } else if (booking.status === 'pending') {
+      pending += 1
+    }
+  }
+  return { confirmed, pending, total: pending + confirmed }
+}
+
+function SlotStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="rounded-xl border border-border bg-card p-5 shadow-sm"
+    >
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
+    </div>
+  )
+}
+
+function SlotSummaryCards({ bookings }: { bookings: BookingRead[] }) {
+  const summary = summarizeSlots(bookings)
+  return (
+    <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <SlotStat label="Забронировано" value={summary.confirmed} />
+      <SlotStat label="Требуют согласования" value={summary.pending} />
+      <SlotStat label="Всего слотов" value={summary.total} />
+    </div>
+  )
+}
+
 function BookingsPage() {
   // Выбранный пояс подписан один раз на весь список.
   const { timeZone } = useTimeZone()
@@ -73,6 +116,9 @@ function BookingsPage() {
           : 'Ваши предстоящие встречи.'}{' '}
         Время указано в поясе: {timeZoneName(timeZone)}.
       </p>
+      {isOwner && status === 'ready' ? (
+        <SlotSummaryCards bookings={bookings} />
+      ) : null}
       {status === 'error' ? (
         <div className="mt-8 max-w-md space-y-3">
           <p role="alert" className="text-sm text-destructive">
