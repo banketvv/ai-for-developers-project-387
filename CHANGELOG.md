@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.4.0...v0.4.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* allow /oc on plain issues ([#34](https://github.com/banketvv/ai-for-developers-project-387/issues/34)) ([25aac0b](https://github.com/banketvv/ai-for-developers-project-387/commit/25aac0b2f1491b0575c1929c8f54eed72fbf27d9))
+* authenticate the review action version lookup ([#26](https://github.com/banketvv/ai-for-developers-project-387/issues/26)) ([32e0476](https://github.com/banketvv/ai-for-developers-project-387/commit/32e0476e916dec9b7a49ffa24c7a74bae8bb48a5))
+
 ## [0.4.0](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.3.0...v0.4.0) (2026-11-23)
 
 
