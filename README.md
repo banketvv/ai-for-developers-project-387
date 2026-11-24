@@ -73,7 +73,7 @@ cd ai-for-developers-project-387
 
 Критерии ревью собраны в [`REVIEW.md`](REVIEW.md): инварианты календаря, контракт API, данные, frontend, тесты и гигиена PR. Шаблон пул-реквеста — [`.github/pull_request_template.md`](.github/pull_request_template.md); он требует заполнить проверки, риск и способ отката.
 
-Автоматическое ревью на `pull_request` выполняет [`.github/workflows/opencode-review.yml`](.github/workflows/opencode-review.yml). Ревью оставляет комментарий и необязательный check `OpenCode review`, отменяет устаревший прогон при новом коммите и пропускает PR из форков, где недоступны секреты.
+Автоматическое ревью на `pull_request` выполняет [`.github/workflows/opencode-review.yml`](.github/workflows/opencode-review.yml). Ревью оставляет комментарий и необязательный check `OpenCode review`, отменяет устаревший прогон при новом коммите и пропускает PR из форков, где недоступны секреты. PR, созданные ботами (включая release-please), пропускаются.
 
 ## Аудит Lighthouse
 

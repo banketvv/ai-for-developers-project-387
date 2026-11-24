@@ -19,7 +19,9 @@ permissions: {}
 
 jobs:
   review:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -69,6 +71,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: gh pr diff "${PR_NUMBER}" > /tmp/opencode-pr.diff
+
+      # The OpenCode action looks up its latest version with an unauthenticated
+      # curl to api.github.com; shared runner IPs hit the 60-request limit.
+      # Authenticate that curl through netrc. Credentials are scoped to
+      # api.github.com, so the action's install curl to opencode.ai does not
+      # receive the token. Both files are outside the checkout; the review job
+      # cannot read them because bash and external directories are denied.
+      - name: Authenticate GitHub API for the action
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf 'machine api.github.com\n  login x-access-token\n  password %s\n' \
+            "${GITHUB_TOKEN}" > "${HOME}/.netrc"
+          chmod 600 "${HOME}/.netrc"
+          printf 'netrc-file = "%s"\n' "${HOME}/.netrc" > "${HOME}/.curlrc"
 
       - name: Run OpenCode review
         id: review
