@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.4.2...v0.4.3) (2026-11-24)
+
+
+### Documentation
+
+* document the end-to-end workflow demo ([#45](https://github.com/banketvv/ai-for-developers-project-387/issues/45)) ([cb02c64](https://github.com/banketvv/ai-for-developers-project-387/commit/cb02c64040cf2a5ebf0552833fa5120eb95161f0))
+
 ## [0.4.2](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.4.1...v0.4.2) (2026-11-24)
 
 
