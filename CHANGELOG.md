@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.4.1...v0.4.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* run review through OpenCode CLI and gh pr comment ([#26](https://github.com/banketvv/ai-for-developers-project-387/issues/26)) ([922dea3](https://github.com/banketvv/ai-for-developers-project-387/commit/922dea3891a9109f001b7fae657481400e7ac8d6))
+
 ## [0.4.1](https://github.com/banketvv/ai-for-developers-project-387/compare/v0.4.0...v0.4.1) (2026-11-24)
 
 
