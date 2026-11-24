@@ -46,6 +46,14 @@ cd ai-for-developers-project-387
 - **Workflow-файлы:** изменения в `.github/workflows/*` делает человек; агенту запись туда запрещена в конфигурации workflow `opencode.yml`, потому что у OpenCode App нет права `workflows`.
 - **Проверка workflow:** `mise run actions:lint`; она входит в общую `mise run check`.
 
+### Демонстрация полного цикла
+
+Совместная работа workflow видна на issue [#45](https://github.com/banketvv/ai-for-developers-project-387/issues/45) и связанном с ним PR [#48](https://github.com/banketvv/ai-for-developers-project-387/pull/48):
+
+- **Автотриаж:** новое обращение получило [разбор с меткой `needs-triage`](https://github.com/banketvv/ai-for-developers-project-387/issues/45#issuecomment-7130284661) — [run #17](https://github.com/banketvv/ai-for-developers-project-387/actions/runs/45385373642).
+- **Вызов `/oc` в issue:** `/oc to-spec`, `/oc to-tickets` и `/oc implement-spec` создали спецификацию #46, тикет #47 и PR #48 — [run #85](https://github.com/banketvv/ai-for-developers-project-387/actions/runs/45387571765).
+- **Авторевью:** PR #48 создан ботом-агентом и всё равно получил ревью — [run #6](https://github.com/banketvv/ai-for-developers-project-387/actions/runs/45387903325), [комментарий к PR](https://github.com/banketvv/ai-for-developers-project-387/pull/48#issuecomment-7130672208).
+
 ## Лимит запусков на PR
 
 Чтобы ограничить расходы, workflow [`.github/workflows/opencode.yml`](.github/workflows/opencode.yml) проверяет бюджет **до вызова модели**. Имя файла `opencode.yml` важно: счётчик читает историю запусков именно этого workflow. На обычных issue `/oc` работает без бюджета.
@@ -87,7 +95,7 @@ cd ai-for-developers-project-387
 - **Агент:** получает prompt с путями к `/tmp/lighthouse-findings.json` (все находки) и `/tmp/lighthouse-new-findings.json` (только новые) и создаёт отдельное issue на каждую новую находку. Заголовок — `[Lighthouse] <id>: <title>`, метка — `lighthouse`.
 - **Права и авторизация:** `contents: read` для checkout, `issues: write` для поиска дублей и создания issue, `id-token: write` для OIDC-обмена на scoped-токен OpenCode App — тот же способ, что и в остальных workflow. Модель — `deepseek/deepseek-flash`, ключ из секрета `OPENCODE_API_KEY`.
 - **Ограничения агента:** файлы правит только в `/tmp`, из shell доступны только команды `gh`, запись в репозиторий, коммиты и push запрещены. Текст отчёта считается данными, а не инструкциями; `.env`-файлы не читаются.
-- **Ручной запуск и результаты:** после переноса файла запуск делается из основной ветки: `Actions → OpenCode Lighthouse audit → Run workflow`. Успешный запуск оставляет артефакт `lighthouse-audit-<run_id>` с `report.json`, `report.html` и `agent-output.md`; вывод агента также виден в логе шага. Разбор проверен на реальном отчёте текущего production (Lighthouse 12.8.2, те же четыре категории): он выделил FCP, LCP, `meta-description` и `robots-txt`; фактические issue создаст первый запуск, потому что workflow-файл ещё не перенесён человеком.
+- **Ручной запуск и результаты:** после переноса файла запуск делается из основной ветки: `Actions → OpenCode Lighthouse audit → Run workflow`. Успешный запуск оставляет артефакт `lighthouse-audit-<run_id>` с `report.json`, `report.html` и `agent-output.md`; вывод агента также виден в логе шага. Ручной прогон — [run #1](https://github.com/banketvv/ai-for-developers-project-387/actions/runs/45361226900): он разобрал реальный отчёт production (Lighthouse 12.8.2) и создал issue [#36](https://github.com/banketvv/ai-for-developers-project-387/issues/36)–[#41](https://github.com/banketvv/ai-for-developers-project-387/issues/41) по находкам color-contrast, FCP, LCP, `meta-description`, `robots-txt` и speed-index.
 - **Личные выводы:** агент хорошо подходит для рутинного разбора отчёта и оформления задач, но дедупликацию нельзя целиком отдавать модели. Поэтому workflow сам вычисляет дельту и маркеры, а агенту остаётся оформить текст issue. Слабое место — запуск и расписание невозможно включить из PR: нужен человек, который перенесёт файл в `.github/workflows/`.
 
 ---
